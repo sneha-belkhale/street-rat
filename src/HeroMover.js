@@ -1,34 +1,86 @@
 var THREE = require('three');
 
+/**
+Hero Mover:: Third Person controls for the hero that
+are in sync with a given collision grid
+
+keys:
+W - move hero forward
+A - rotate hero to the left
+S - rotate hero to the right
+D - move hero backwards
+
+mouse:
+move mouse to rotate camera around the hero
+
+**/
+
 export default class HeroMover {
-  constructor( hero, worldGrid ) {
+  constructor( hero, worldGrid, camera, scene ) {
     this.hero = hero;
     this.worldGrid = worldGrid;
+    this.camera = camera;
+    this.pivot = new THREE.Object3D()
+    this.pivot.position.copy(hero.position)
+    this.pivot.add(this.camera)
+    scene.add(this.pivot)
+
+    this.camera.position.set(0,10,50)
+
+    //helpers
     this.incomingPos = new THREE.Vector3()
+    this.lastMousePos = new THREE.Vector2()
+    this.delta = new THREE.Vector2()
+
     window.addEventListener('keydown', this.moveHero)
+    window.addEventListener('mouseup', this.endRotate)
+    window.addEventListener('mousemove', this.rotate)
+  }
+
+  rotate = (event) => {
+    if(this.lastMousePos.x == 0 && this.lastMousePos.y == 0) {
+      this.lastMousePos.set(event.x, event.y);
+      return;
+    }
+    this.delta.set(event.x, event.y).sub(this.lastMousePos);
+    this.lastMousePos.set(event.x, event.y)
+
+    //can only rotate around the y axis
+    this.pivot.rotateY(this.delta.x*0.01)
+  }
+
+  endRotate = (event) => {
+    this.lastMousePos.set(0,0)
   }
 
   moveHero = (event) => {
-
+    var rotateY = null
     switch(event.key){
       case "a":
-      this.incomingPos.set(this.hero.position.x, this.hero.position.y, this.hero.position.z+1)
+      rotateY = 0.1
       break;
       case "w":
-      this.incomingPos.set(this.hero.position.x-1, this.hero.position.y, this.hero.position.z)
+      var forward = new THREE.Vector3(0,0,-1).applyQuaternion(this.hero.quaternion)
+      this.incomingPos.copy(this.hero.position).add(forward)
       break;
       case "d":
-      this.incomingPos.set(this.hero.position.x, this.hero.position.y, this.hero.position.z-1)
+      rotateY = -0.1
       break;
       case "s":
-      this.incomingPos.set(this.hero.position.x+1, this.hero.position.y, this.hero.position.z)
+      var backward = new THREE.Vector3(0,0,1).applyQuaternion(this.hero.quaternion)
+      this.incomingPos.copy(this.hero.position).add(backward)
       break;
     }
 
-    var passed = this.handleBoundingBoxCollision(this.hero.geometry.boundingBox, this.incomingPos)
+    if(rotateY){
+      this.hero.rotateY(rotateY)
+      return;
+    }
 
+    var passed = this.handleBoundingBoxCollision(this.hero.geometry.boundingBox, this.incomingPos)
     if(passed){
       this.hero.position.copy(this.incomingPos)
+      this.pivot.position.copy(this.incomingPos)
     }
   }
 

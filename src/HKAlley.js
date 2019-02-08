@@ -20,10 +20,9 @@ export default function initWebScene() {
   scene = new THREE.Scene();
   //set up camera
   camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 1, 100000 );
-  camera.position.set(372, 156,372)
   scene.add( camera );
   //set up controls
-  controls = new OrbitControls(camera);
+  // controls = new OrbitControls(camera);
   //restrict movement to stay within the room
   renderer = new THREE.WebGLRenderer({antialias:true});
   renderer.antialias = true
@@ -36,7 +35,9 @@ export default function initWebScene() {
   document.body.appendChild( stats.dom );
 
   /** LIGHTS **/
+  // var neonPos = new THREE.Vector3(10,10,-45)
   var neonPos = new THREE.Vector3(10,10,-45)
+
   var rectLight = new THREE.RectAreaLight( 0xff00ff, 800,  5, 5 );
   rectLight.position.copy( neonPos );
   rectLight.lookAt( 0, 0, -1 );
@@ -125,22 +126,21 @@ export default function initWebScene() {
   worldGrid.fillGridForMesh(roomWall, scene)
   worldGrid.fillGridForMesh(glowTorusMain, scene)
 
-  mouse = new THREE.Mesh(new THREE.BoxGeometry(5,5,5), new THREE.MeshPhysicalMaterial())
+  mouse = new THREE.Mesh(new THREE.BoxGeometry(5,5,10), new THREE.MeshPhysicalMaterial())
   scene.add(mouse)
   mouse.position.y = -40
   mouse.geometry.computeBoundingBox()
 
-  var heroMover = new HeroMover(mouse, worldGrid);
+  var heroMover = new HeroMover(mouse, worldGrid, camera, scene);
   envMapController = new EnvMapController([groundFloor, mouse], cubeCamera, renderer, scene)
   update()
 }
 
 function update() {
     requestAnimationFrame(update);
-    controls.update()
-    // Update the render target cube
     stats.begin()
-    envMapController.update()
+    envMapController.update();
+    //sorry about dis
     groundFloor.material.uniforms.maxMipLevel.value = renderer.properties.get( groundFloor.material.envMap ).__maxMipLevel;
     renderer.render( scene, camera );
     stats.end()
