@@ -1,5 +1,5 @@
 const ParallaxCorrectPhysicalMaterial = {
-fragmentShader: `
+    fragmentShader: `
   #define PHYSICAL
   uniform vec3 diffuse;
   uniform vec3 emissive;
@@ -185,7 +185,7 @@ fragmentShader: `
   }
   `,
 
-vertexShader: `
+    vertexShader: `
   #define PHYSICAL
   varying vec3 vViewPosition;
   #ifndef FLAT_SHADED
@@ -235,6 +235,6 @@ vertexShader: `
   	#include <fog_vertex>
   }
   `
-}
+};
 
-export default ParallaxCorrectPhysicalMaterial
+export default ParallaxCorrectPhysicalMaterial;

@@ -1,5 +1,5 @@
-import initWebScene from './HKAlley'
+import initWebScene from './HKAlley';
 
-document.body.style.margin = "0";
+document.body.style.margin = '0';
 
 initWebScene();

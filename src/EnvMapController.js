@@ -1,20 +1,20 @@
 export default class EnvMapController {
-  constructor(hiddenMeshes, cubeCamera, renderer, scene) {
-    this.hiddenMeshes = hiddenMeshes;
-    this.cubeCamera = cubeCamera;
-    this.renderer = renderer;
-    this.scene = scene;
-  }
-  update() {
+    constructor(hiddenMeshes, cubeCamera, renderer, scene) {
+        this.hiddenMeshes = hiddenMeshes;
+        this.cubeCamera = cubeCamera;
+        this.renderer = renderer;
+        this.scene = scene;
+    }
 
-    this.hiddenMeshes.forEach((mesh) => {
-      mesh.visible = false;
-    })
+    update() {
+        this.hiddenMeshes.forEach((mesh) => {
+            mesh.visible = false;
+        });
 
-    this.cubeCamera.update( this.renderer, this.scene );
+        this.cubeCamera.update(this.renderer, this.scene);
 
-    this.hiddenMeshes.forEach((mesh) => {
-      mesh.visible = true;
-    })
-  }
+        this.hiddenMeshes.forEach((mesh) => {
+            mesh.visible = true;
+        });
+    }
 }

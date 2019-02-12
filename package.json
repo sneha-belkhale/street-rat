@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "./",
   "dependencies": {
+    "lint": "^1.1.2",
     "react-scripts": "1.1.4",
     "stats-js": "^1.0.0",
     "three": "^0.101.1",
@@ -15,6 +16,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "linter": "eslint --ignore-path .gitignore ."
   }
 }

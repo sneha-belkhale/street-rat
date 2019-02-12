@@ -31,6 +31,8 @@ export default class HeroMover {
     this.incomingPos = new THREE.Vector3()
     this.lastMousePos = new THREE.Vector2()
     this.delta = new THREE.Vector2()
+    this.velocity = new THREE.Vector3()
+    this.moving = true;
 
     window.addEventListener('keydown', this.moveHero)
     window.addEventListener('mouseup', this.endRotate)
@@ -70,7 +72,18 @@ export default class HeroMover {
       var backward = new THREE.Vector3(0,0,1).applyQuaternion(this.hero.quaternion)
       this.incomingPos.copy(this.hero.position).add(backward)
       break;
+      case " ":
+      console.log('space')
+      var forward = new THREE.Vector3(0,0,-1).applyQuaternion(this.hero.quaternion)
+
+      this.velocity.y = 8;
+      this.velocity.x = 5*forward.x;
+      this.velocity.z = 5*forward.z;
+
+      this.moving = true;
+      break;
     }
+
 
     if(rotateY){
       this.hero.rotateY(rotateY)
@@ -94,11 +107,57 @@ export default class HeroMover {
         for(var k =0; k<2; k++){
           var value = this.worldGrid.valueAtWorldPos(this.incomingPos.x+minmax[i].x, this.incomingPos.y+minmax[j].y, this.incomingPos.z+minmax[k].z);
           if ( value > 0 ) {
-            return false
+            return [false, i,j,k]
           }
         }
       }
     }
+    return [true, 1, 1, 1]
+  }
+
+  checkForGroundAtPos(incomingPos, boundingBox){
+    var minmax = [
+      boundingBox.min,
+      boundingBox.max,
+    ]
+    for(var i =0; i<2; i++){
+      for(var j =0; j<2; j++){
+        var value = this.worldGrid.valueAtWorldPos(this.incomingPos.x+minmax[i].x, this.incomingPos.y+minmax[0].y, this.incomingPos.z+minmax[j].z);
+        if ( value == 0 ) {
+          return false
+        }
+      }
+    }
     return true
+  }
+
+  update() {
+    if(this.moving){
+      var dt = 0.03
+      this.velocity.x*=0.99
+      this.velocity.z*=0.99
+      var gravity = new THREE.Vector3(0,-9.8,0)
+      this.velocity.add(gravity.multiplyScalar(dt))
+      console.log(this.hero.position)
+      this.incomingPos.copy(this.hero.position).add(this.velocity.clone().multiplyScalar(dt))
+      var passed = this.handleBoundingBoxCollision(this.hero.geometry.boundingBox, this.incomingPos)
+      //if we hit the ground, then stop. if we hit something else/ fall?
+      if(passed[0]){
+        this.hero.position.copy(this.incomingPos)
+        this.pivot.position.copy(this.incomingPos)
+      } else if(passed[2]==0){
+        //stop moving only if there is something underneath
+        this.moving = false;
+      } else if(passed[2]==1){
+        this.velocity.set(0,-1,0)
+        this.hero.position.copy(this.incomingPos)
+        this.pivot.position.copy(this.incomingPos)
+      }
+    }
+
+    var p = this.checkForGroundAtPos(this.hero.position, this.hero.geometry.boundingBox)
+    if(!p){
+      this.moving = true;
+    }
   }
 }

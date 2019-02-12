@@ -1,6 +1,6 @@
 const GlowShader = {
 
-  vertexShader: `
+    vertexShader: `
     varying vec3 vNormal;
     varying vec3 vViewPosition;
     void main()
@@ -12,7 +12,7 @@ const GlowShader = {
         gl_Position = projectionMatrix * modelViewPosition;
     }
 `,
-  fragmentShader: `
+    fragmentShader: `
     varying vec3 vNormal;
     varying vec3 vViewPosition;
     void main()
@@ -20,6 +20,6 @@ const GlowShader = {
     	float intensity = pow(dot( vNormal, vViewPosition ), 1.5);
         gl_FragColor = 0.8*vec4( 1.0, 0.0, 1.0, 1.0 )*intensity ;
     }`
-}
+};
 
-export default GlowShader
+export default GlowShader;
