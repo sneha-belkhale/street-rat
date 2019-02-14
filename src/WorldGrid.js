@@ -53,7 +53,7 @@ export default class WorldGrid {
             var starsGeometry = new THREE.Geometry();
         }
         var flip = 1;
-        if(mesh.material.side == THREE.BackSide){
+        if(mesh.material.side === THREE.BackSide){
           flip = -1;
         }
         mesh.geometry.faces.forEach((face) => {

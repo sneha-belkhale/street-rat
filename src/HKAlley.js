@@ -4,6 +4,8 @@ import ParallaxCorrectPhysicalMaterial from './ParallaxCorrectPhysicalMaterial';
 import WorldGrid from './WorldGrid';
 import HeroMoverNN from './HeroMoverNN';
 import EnvMapController from './EnvMapController';
+import { IK, IKChain, IKJoint, IKBallConstraint, IKHelper } from 'three-ik';
+import FBXLoader from './FBXLoader'
 
 import initRect from './rectAreaLights';
 initRect();
@@ -12,7 +14,7 @@ let OBJLoader = require('three-obj-loader')(THREE);
 let OrbitControls = require('three-orbit-controls')(THREE);
 
 let scene, camera, renderer, controls;
-let mouse, stats, envMapController, heroMover;
+let stats, envMapController, heroMover;
 let cubeCamera, groundFloor;
 let worldGrid;
 
@@ -23,7 +25,7 @@ export default function initWebScene() {
     camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 100000);
     scene.add(camera);
     // set up controls
-    // controls = new OrbitControls(camera);
+    controls = new OrbitControls(camera);
     // restrict movement to stay within the room
     renderer = new THREE.WebGLRenderer({ antialias:true });
     renderer.antialias = true;
@@ -94,7 +96,7 @@ export default function initWebScene() {
     chromeMaterial.envMap.needsUpdate = true;
     groundFloor.position.set(0, -49, 0);
     groundFloor.geometry.computeVertexNormals();
-    scene.add(groundFloor);
+    // scene.add(groundFloor);
     cubeCamera.position.copy(groundFloor.position);
 
     // add something glow
@@ -145,13 +147,66 @@ export default function initWebScene() {
     worldGrid.fillGridForMesh(glowTorusMain, scene);
     worldGrid.fillGridForMesh(hemisphere, scene);
 
-    mouse = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshPhysicalMaterial());
-    scene.add(mouse);
-    mouse.position.y = -50;
-    mouse.geometry.computeBoundingBox();
+    /** LOADING HERO MESH. SOMEONE HELP HERE THIS IS A MESS
 
-    heroMover = new HeroMoverNN(mouse, worldGrid, camera, scene);
-    envMapController = new EnvMapController([ groundFloor, mouse ], cubeCamera, renderer, scene);
+    #1 set rat feet target points
+    #2 iterate through the bones and add ik for two legs
+    #3 start the hero mover
+
+    **/
+    var fbxLoader = new FBXLoader()
+    var hero = new THREE.Object3D();
+    hero.position.set(0,-48,0)
+    scene.add(hero)
+
+    fbxLoader.load(require('./assets/rat-01.fbx'), (ratMesh) => {
+      var bonePoints = []
+      var boneGeo = new THREE.BoxGeometry(1,1,1)
+      var boneMat = new THREE.MeshPhysicalMaterial({color:'0xff00ff'})
+      var numBones = 2;
+      for(var i =0 ; i < numBones; i++){
+        var mesh = new THREE.Mesh(boneGeo, boneMat)
+        mesh.position.set(3*(2*i - 1), -49, 2)
+        bonePoints.push(mesh)
+        scene.add(mesh)
+      }
+
+      var rat = ratMesh.children[0]
+      rat.material = new THREE.MeshPhysicalMaterial({
+        opacity: 0.4,
+        transparent: true,
+      })
+      rat.scale.set(25,25,25)
+      rat.rotateY(Math.PI)
+      hero.add(rat)
+      var boneGroup = ratMesh.children[0];
+
+      //make a chain connecting the legs
+      var iks = []
+      for (var j = 0; j < 2; j++){
+        var ik = new IK();
+        const chain = new IKChain();
+        var currentBone = boneGroup.children[j];
+        for (let i = 0; i < 4; i++) {
+          currentBone = currentBone.children[0]
+          var constraints = [new IKBallConstraint(180)];
+          if(i == 1 || i ==0){
+            constraints = [new IKBallConstraint(90)];
+          }
+          currentBone.position.multiplyScalar(25)
+          // The last IKJoint must be added with a `target` as an end effector.
+          const target = i === 3 ? bonePoints[j] : null;
+          chain.add(new IKJoint(currentBone, { constraints }), { target });
+        }
+        ik.add(chain);
+        hero.add(ik.getRootBone());
+        const helper = new IKHelper(ik);
+        scene.add(helper);
+        iks.push(ik)
+      }
+      heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
+    })
+    envMapController = new EnvMapController([ groundFloor ], cubeCamera, renderer, scene);
     update();
 }
 
@@ -159,7 +214,9 @@ function update() {
     requestAnimationFrame(update);
     stats.begin();
     envMapController.update();
-    heroMover.update();
+    if(heroMover){
+      heroMover.update();
+    }
     // sorry about dis
     groundFloor.material.uniforms.maxMipLevel.value = renderer.properties.get(groundFloor.material.envMap).__maxMipLevel;
     renderer.render(scene, camera);
