@@ -4,7 +4,7 @@ import ParallaxCorrectPhysicalMaterial from './ParallaxCorrectPhysicalMaterial';
 import WorldGrid from './WorldGrid';
 import HeroMoverNN from './HeroMoverNN';
 import EnvMapController from './EnvMapController';
-import { IK, IKChain, IKJoint, IKBallConstraint, IKHelper } from 'three-ik';
+import { IK, IKChain, IKJoint, IKBallConstraint, IKHelper } from './three-ik/src';
 import FBXLoader from './FBXLoader'
 
 import initRect from './rectAreaLights';
@@ -17,7 +17,7 @@ let scene, camera, renderer, controls;
 let stats, envMapController, heroMover;
 let cubeCamera, groundFloor;
 let worldGrid;
-
+var testBone;
 export default function initWebScene() {
   /** BASIC THREE SETUP **/
     scene = new THREE.Scene();
@@ -155,11 +155,12 @@ export default function initWebScene() {
 
     **/
     var fbxLoader = new FBXLoader()
-    var hero = new THREE.Object3D();
-    hero.position.set(0,-48,0)
-    scene.add(hero)
 
-    fbxLoader.load(require('./assets/rat-01.fbx'), (ratMesh) => {
+    fbxLoader.load(require('./assets/rat-03.fbx'), (ratMesh) => {
+      scene.add(ratMesh)
+      var hero = ratMesh;
+      hero.scale.set(1,1,1)
+      hero.position.set(0,-54,0)
       var bonePoints = []
       var boneGeo = new THREE.BoxGeometry(1,1,1)
       var boneMat = new THREE.MeshPhysicalMaterial({color:'0xff00ff'})
@@ -170,17 +171,24 @@ export default function initWebScene() {
         bonePoints.push(mesh)
         scene.add(mesh)
       }
+      console.log(ratMesh)
 
       var rat = ratMesh.children[0]
       rat.material = new THREE.MeshPhysicalMaterial({
         opacity: 0.4,
-        transparent: true,
+        skinning: true
       })
-      rat.scale.set(25,25,25)
-      rat.rotateY(Math.PI)
-      hero.add(rat)
-      var boneGroup = ratMesh.children[0];
 
+      // rat.bind(rat.skeleton)
+
+      var boneGroup = ratMesh.children[1].children[0];
+      var helper = new THREE.SkeletonHelper( boneGroup );
+      helper.material.linewidth = 5;
+      scene.add( helper )
+
+      testBone = boneGroup.children[0].children[0]
+
+      // rat
       //make a chain connecting the legs
       var iks = []
       for (var j = 0; j < 2; j++){
@@ -189,23 +197,21 @@ export default function initWebScene() {
         var currentBone = boneGroup.children[j];
         for (let i = 0; i < 4; i++) {
           currentBone = currentBone.children[0]
-          var constraints = [new IKBallConstraint(180)];
-          if(i == 1 || i ==0){
-            constraints = [new IKBallConstraint(90)];
-          }
-          currentBone.position.multiplyScalar(25)
+
+          var constraints = [new IKBallConstraint(360)];
+          // if(i ==0){
+          //   constraints = [new IKBallConstraint(90)];
+          // }
           // The last IKJoint must be added with a `target` as an end effector.
-          const target = i === 3 ? bonePoints[j] : null;
+          const target = i === 3 ? bonePoints[Math.abs(1-j)] : null;
           chain.add(new IKJoint(currentBone, { constraints }), { target });
         }
         ik.add(chain);
-        hero.add(ik.getRootBone());
-        const helper = new IKHelper(ik);
-        scene.add(helper);
         iks.push(ik)
       }
       heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
-    })
+
+    },console.log,console.log)
     envMapController = new EnvMapController([ groundFloor ], cubeCamera, renderer, scene);
     update();
 }

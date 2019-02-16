@@ -96,10 +96,10 @@ export default class HeroMover {
     //one quaternion.
     switch(event.key){
       case "w":
-      forwards = new THREE.Vector3(0,0,-1).applyQuaternion(this.hero.quaternion)
+      forwards = new THREE.Vector3(0,0,1).applyQuaternion(this.hero.quaternion)
       break;
       case "s":
-      forwards = new THREE.Vector3(0,0,1).applyQuaternion(this.hero.quaternion)
+      forwards = new THREE.Vector3(0,0,-1).applyQuaternion(this.hero.quaternion)
       break;
     }
     if(!forwards){
@@ -113,9 +113,9 @@ export default class HeroMover {
     //set foot position to the left of mouse base
     var left = new THREE.Vector3(3*(2*((this.curBone+1)%2)-1),0,0).applyQuaternion(this.hero.quaternion)
     console.log(2*((this.curBone+1)%2)-1)
-    foot.position.x = this.hero.position.x + left.x - 2*upVector.x + 5*forwards.x
-    foot.position.y = this.hero.position.y + left.y - 2*upVector.y + 5*forwards.y
-    foot.position.z = this.hero.position.z + left.z - 2*upVector.z + 5*forwards.z
+    foot.position.x = this.hero.position.x + left.x -2*upVector.x + 4*forwards.x
+    foot.position.y = this.hero.position.y + left.y -2*upVector.y + 4*forwards.y
+    foot.position.z = this.hero.position.z + left.z -2*upVector.z + 4*forwards.z
 
     if(DEBUG_MODE){
       this.arrowHelper.setDirection(forwards)
