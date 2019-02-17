@@ -1,5 +1,6 @@
+import ParabolicFootTweener from './Tweener'
+
 var THREE = require('three');
-var TWEEN = require('tween');
 
 /**
 Hero Mover:: Third Person controls for the hero that
@@ -43,6 +44,8 @@ export default class HeroMover {
     this.delta = new THREE.Vector2()
     this.velocity = new THREE.Vector3()
     this.moving = true;
+    this.pos = 0
+    this.tweener = new ParabolicFootTweener()
 
     window.addEventListener('keydown', this.moveHero)
     window.addEventListener('mouseup', this.endRotate)
@@ -152,11 +155,11 @@ export default class HeroMover {
       var foot2 = this.bonePoints[(this.curBone)%2];
 
       var newHeroPos = new THREE.Vector3().addVectors(foot2.position, foot.position).multiplyScalar(0.5)
-      newHeroPos.add(upNew.multiplyScalar(2))
+      newHeroPos.add(upNew.multiplyScalar(1))
       this.hero.position.copy(newHeroPos)
       this.pivot.position.copy(newHeroPos)
 
-      var tween = new TWEEN.Tween(foot.position).to(this.incomingPos, 50).start();
+      this.tweener.addTween(foot.position, this.incomingPos, upNew, 60);
     }
   }
 
@@ -205,7 +208,7 @@ export default class HeroMover {
   // }
 
   update() {
-    TWEEN.update();
+    this.tweener.update()
     if(this.iks){
       this.iks.forEach((ik)=>{
         ik.solve()

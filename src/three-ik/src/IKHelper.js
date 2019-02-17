@@ -20,7 +20,6 @@ class BoneHelper extends Object3D {
     if (height !== 0) {
       const geo = new ConeBufferGeometry(boneSize, height, 4);
       geo.applyMatrix(new Matrix4().makeRotationAxis(new Vector3(1, 0, 0), Math.PI/2));
-
       this.boneMesh = new Mesh(geo, new MeshBasicMaterial({
         color: 0xff0000,
         wireframe: true,
@@ -193,7 +192,10 @@ class IKHelper extends Object3D {
 
   updateMatrixWorld(force) {
     for (let [joint, mesh] of this._meshes) {
-      mesh.matrix.copy(joint.bone.matrixWorld);
+      // mesh.matrix.copy(joint.bone.matrixWorld);
+      joint.bone.getWorldPosition(mesh.position)
+      joint.bone.getWorldQuaternion(mesh.quaternion)
+      mesh.updateMatrix()
     }
     super.updateMatrixWorld(force);
   }

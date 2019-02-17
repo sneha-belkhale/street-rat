@@ -27,7 +27,6 @@ class IKBallConstraint {
    * @return {boolean}
    */
   _apply(joint) {
-
     // Get direction of joint and parent in world space
     const direction = new Vector3().copy(joint._getDirection());
     const parentDirection = joint._localToWorldDirection(new Vector3().copy(Z_AXIS)).normalize();
@@ -35,7 +34,7 @@ class IKBallConstraint {
     // Find the current angle between them
     const currentAngle = direction.angleTo(parentDirection) * RAD2DEG;
 
-    if ((this.angle / 2) < currentAngle) {
+    if (currentAngle > this.angle) {
       direction.normalize();
       // Find the correction axis and rotate around that point to the
       // largest allowed angle
