@@ -1,7 +1,8 @@
-import { Quaternion, Matrix4, Vector3, Math as ThreeMath } from 'three';
+import { Quaternion, Matrix4, Vector3, Plane, Math as ThreeMath } from 'three';
 import { transformPoint, getCentroid, getWorldPosition, setQuaternionFromDirection } from './utils.js';
 
 const Z_AXIS = new Vector3(0, 0, 1);
+const X_AXIS = new Vector3(1, 0, 0);
 const { DEG2RAD, RAD2DEG } = ThreeMath;
 
 /**
@@ -15,6 +16,7 @@ class IKBallConstraint {
    */
   constructor(angle) {
     this.angle = angle;
+    this.rotationPlane = new Plane(X_AXIS);
   }
 
   /**
@@ -42,8 +44,21 @@ class IKBallConstraint {
 
       parentDirection.applyAxisAngle(correctionAxis, this.angle * DEG2RAD * 0.5);
       joint._setDirection(parentDirection);
-      return true;
     }
+
+
+
+    //project direction on the rotation plane. right now i'm assuming that there is always
+    //a rotation plane and it is the local x axis.. TODO: to make this configurable
+    const rotationPlaneNormal = joint._localToWorldDirection(new Vector3().copy(X_AXIS)).normalize();
+    this.rotationPlane.normal = rotationPlaneNormal
+
+    this.rotationPlane.projectPoint(direction, parentDirection)
+    joint._setDirection(parentDirection);
+
+
+
+    return true;
 
     return false;
   }

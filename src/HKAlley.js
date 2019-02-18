@@ -197,7 +197,10 @@ export default function initWebScene() {
           currentBone = currentBone.children[0]
           var constraints = [new IKBallConstraint(180)];
           if(i==3){
-            constraints = [new IKBallConstraint(90)];
+            constraints = [new IKBallConstraint(10)];
+          }
+          if(i==0){
+            constraints = null;
           }
           // The last IKJoint must be added with a `target` as an end effector.
           const target = i === 3 ? bonePoints[Math.abs(1-j)] : null;

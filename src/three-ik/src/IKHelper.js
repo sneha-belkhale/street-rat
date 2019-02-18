@@ -35,6 +35,7 @@ class BoneHelper extends Object3D {
     this.add(this.boneMesh);
 
     this.axesHelper = new AxesHelper(axesSize);
+    this.axesHelper.scale.set(10,10,10)
     this.add(this.axesHelper);
   }
 }
