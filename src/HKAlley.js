@@ -6,12 +6,23 @@ import HeroMoverNN from './HeroMoverNN';
 import EnvMapController from './EnvMapController';
 import { IK, IKChain, IKJoint, IKBallConstraint, IKHelper } from './three-ik/src';
 import FBXLoader from './FBXLoader'
-
 import initRect from './rectAreaLights';
 initRect();
 let THREE = require('three');
 let OBJLoader = require('three-obj-loader')(THREE);
 let OrbitControls = require('three-orbit-controls')(THREE);
+
+function promisifyLoader ( loader, onProgress ) {
+  function promiseLoader ( url ) {
+    return new Promise( ( resolve, reject ) => {
+      loader.load( url, resolve, onProgress, reject );
+    } );
+  }
+  return {
+    originalLoader: loader,
+    load: promiseLoader,
+  };
+}
 
 let scene, camera, renderer, controls;
 let stats, envMapController, heroMover;
@@ -131,21 +142,15 @@ export default function initWebScene() {
     hemisphere.position.set(80,-80,0)
     scene.add(hemisphere);
 
-    let objLoader = new THREE.OBJLoader();
+    const objLoader = promisifyLoader( new THREE.OBJLoader() );
 
-    objLoader.load(require('./assets/pipe-01.obj'), (asset) => {
+    var pipes = objLoader.load(require('./assets/pipe-01.obj')).then( (asset) => {
         let mesh = asset.children[0];
         mesh.scale.set(50, 50, 50);
         // mesh.position.set(10, -40, 35);
         scene.add(mesh);
         worldGrid.fillGridForBufferMesh(mesh, scene);
     });
-
-
-    worldGrid = new WorldGrid(300, 200, 300, new THREE.Vector3(150, 100, 150));
-    worldGrid.fillGridForMesh(roomWall, scene);
-    worldGrid.fillGridForMesh(glowTorusMain, scene);
-    worldGrid.fillGridForMesh(hemisphere, scene);
 
     /** LOADING HERO MESH. SOMEONE HELP HERE THIS IS A MESS
 
@@ -154,9 +159,9 @@ export default function initWebScene() {
     #3 start the hero mover
 
     **/
-    var fbxLoader = new FBXLoader()
+    const fbxLoader = promisifyLoader( new FBXLoader() );
 
-    fbxLoader.load(require('./assets/rat-03.fbx'), (ratMesh) => {
+    var ratPromise = fbxLoader.load(require('./assets/rat-03.fbx')).then((ratMesh) => {
       scene.add(ratMesh)
       var hero = ratMesh;
       hero.scale.set(1,1,1)
@@ -213,10 +218,20 @@ export default function initWebScene() {
         scene.add(helper2)
       }
       heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
+    })
 
-    },console.log,console.log)
+    //start the render loop once all objs/fbx things are done loading
+    Promise.all( [pipes, ratPromise] ).then( () => {
+      update();
+    });
+
     envMapController = new EnvMapController([ groundFloor ], cubeCamera, renderer, scene);
-    update();
+
+    //initialize collision world grid and fill in the necessary meshes
+    worldGrid = new WorldGrid(300, 200, 300, new THREE.Vector3(150, 100, 150));
+    worldGrid.fillGridForMesh(roomWall, scene);
+    worldGrid.fillGridForMesh(glowTorusMain, scene);
+    worldGrid.fillGridForMesh(hemisphere, scene);
 }
 
 function update() {

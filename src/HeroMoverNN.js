@@ -74,12 +74,6 @@ export default class HeroMover {
     }
   }
 
-  recalculateWorldAxis = () => {
-    this.worldAxis.forward.set(0,0,1).applyQuaternion(this.hero.quaternion)
-    this.worldAxis.up.set(0,1,0).applyQuaternion(this.hero.quaternion)
-    this.worldAxis.left.set(1,0,0).applyQuaternion(this.hero.quaternion)
-  }
-
   rotate = (event) => {
     if(this.lastMousePos.x === 0 && this.lastMousePos.y === 0) {
       this.lastMousePos.set(event.x, event.y);
@@ -104,9 +98,9 @@ export default class HeroMover {
       //set foot position to the left of mouse base
 
       var tmpPos = new THREE.Vector3();
-      tmpPos.x = this.hero.position.x + 3*(2*i-1)*this.worldAxis.left.x + this.worldAxis.up.x + 0.5*this.worldAxis.forward.x
-      tmpPos.y = this.hero.position.y + 3*(2*i-1)*this.worldAxis.left.y + this.worldAxis.up.y + 0.5*this.worldAxis.forward.y
-      tmpPos.z = this.hero.position.z + 3*(2*i-1)*this.worldAxis.left.z + this.worldAxis.up.z + 0.5*this.worldAxis.forward.z
+      tmpPos.x = this.hero.position.x + 3*(2*i-1)*this.worldAxis.left.x -3*this.worldAxis.up.x + 0.5*this.worldAxis.forward.x
+      tmpPos.y = this.hero.position.y + 3*(2*i-1)*this.worldAxis.left.y -3*this.worldAxis.up.y + 0.5*this.worldAxis.forward.y
+      tmpPos.z = this.hero.position.z + 3*(2*i-1)*this.worldAxis.left.z -3*this.worldAxis.up.z + 0.5*this.worldAxis.forward.z
 
       var nn = this.findNearestCollisionPoint(tmpPos)
 
@@ -118,34 +112,10 @@ export default class HeroMover {
         }
 
         this.incomingPos.set(Math.round(this.incomingPos.x),Math.round(this.incomingPos.y),Math.round(this.incomingPos.z))
-        // var upNew = this.alignHeroToGround(nn);
-        foot.position.copy(this.incomingPos)
-        // this.tweener.addTween(foot.position, this.incomingPos, this.worldAxis.up, 60);
+        // foot.position.copy(this.incomingPos)
+        this.tweener.addTween(i, foot.position, this.incomingPos, this.worldAxis.up.clone().multiplyScalar(2), 20);
       }
     }
-  }
-
-  alignHeroToGround = (nn) => {
-    var {forward, up} = this.worldAxis;
-
-    var leftAxis = new THREE.Vector3().crossVectors(forward, up)
-    var forwardAdjustAngle = forward.angleTo(nn[1])
-
-    if(forwardAdjustAngle > 0.01 && forwardAdjustAngle < 3.14){
-      var forwardAdjustQuat = new THREE.Quaternion().setFromAxisAngle(leftAxis, forwardAdjustAngle);
-      this.hero.quaternion.premultiply(forwardAdjustQuat)
-    }
-
-    //adjust quaternion so up vector and surface normal are aligned
-    var upNew = new THREE.Vector3(0,1,0).applyQuaternion(this.hero.quaternion).normalize()
-    var upAdjustAxis = new THREE.Vector3().crossVectors(upNew, nn[2]).normalize()
-    var upAdjustAngle = upNew.angleTo(nn[2])
-
-    if(upAdjustAngle > 0.01 && upAdjustAngle < 3.14){
-      var upAdjustQuat = new THREE.Quaternion().setFromAxisAngle(upAdjustAxis, upAdjustAngle);
-      this.hero.quaternion.premultiply(upAdjustQuat)
-    }
-    return upNew;
   }
 
   endRotate = (event) => {
@@ -186,18 +156,12 @@ export default class HeroMover {
       this.hero.position.copy(newHeroPos)
       this.pivot.position.copy(newHeroPos)
 
-      this.tweener.addTween(foot.position, this.incomingPos, upNew, 60);
+      this.tweener.addTween(this.curBone, foot.position, this.incomingPos, upNew, 60);
     }
   }
 
-  alignArrowHelper = () => {
-    this.arrowHelper.setDirection(this.worldAxis.forward)
-    this.arrowHelper.position.copy(this.hero.position)
-    this.arrowHelperSearch.setDirection(this.worldAxis.up)
-    this.arrowHelperSearch.position.copy(this.hero.position)
-  }
 
-  findNearestCollisionPoint(basePos){
+  findNearestCollisionPoint = (basePos) => {
     var {forward, up} = this.worldAxis;
 
     var minDist = 100
@@ -223,6 +187,42 @@ export default class HeroMover {
       }
     }
     return [found, min[0], min[1]]
+  }
+
+  alignHeroToGround = (nn) => {
+    var {forward, up} = this.worldAxis;
+
+    var leftAxis = new THREE.Vector3().crossVectors(forward, up)
+    var forwardAdjustAngle = forward.angleTo(nn[1])
+
+    if(forwardAdjustAngle > 0.01 && forwardAdjustAngle < 3.14){
+      var forwardAdjustQuat = new THREE.Quaternion().setFromAxisAngle(leftAxis, forwardAdjustAngle);
+      this.hero.quaternion.premultiply(forwardAdjustQuat)
+    }
+
+    //adjust quaternion so up vector and surface normal are aligned
+    var upNew = new THREE.Vector3(0,1,0).applyQuaternion(this.hero.quaternion).normalize()
+    var upAdjustAxis = new THREE.Vector3().crossVectors(upNew, nn[2]).normalize()
+    var upAdjustAngle = upNew.angleTo(nn[2])
+
+    if(upAdjustAngle > 0.01 && upAdjustAngle < 3.14){
+      var upAdjustQuat = new THREE.Quaternion().setFromAxisAngle(upAdjustAxis, upAdjustAngle);
+      this.hero.quaternion.premultiply(upAdjustQuat)
+    }
+    return upNew;
+  }
+
+  alignArrowHelper = () => {
+    this.arrowHelper.setDirection(this.worldAxis.forward)
+    this.arrowHelper.position.copy(this.hero.position)
+    this.arrowHelperSearch.setDirection(this.worldAxis.up)
+    this.arrowHelperSearch.position.copy(this.hero.position)
+  }
+
+  recalculateWorldAxis = () => {
+    this.worldAxis.forward.set(0,0,1).applyQuaternion(this.hero.quaternion)
+    this.worldAxis.up.set(0,1,0).applyQuaternion(this.hero.quaternion)
+    this.worldAxis.left.set(1,0,0).applyQuaternion(this.hero.quaternion)
   }
 
   // handleBoundingBoxCollision(boundingBox, incomingPos){
