@@ -1,6 +1,7 @@
 import ParabolicFootTweener from './Tweener'
 
 var THREE = require('three');
+var TWEEN = require('tween');
 
 /**
 Hero Mover:: Third Person controls for the hero that
@@ -19,6 +20,11 @@ move mouse to rotate camera around the hero
 
 const DEBUG_MODE = false;
 
+//hero constants
+const HERO_HALF_WIDTH = 3;
+const HERO_HEIGHT = 4;
+const HERO_LEG_FORWARD_OFFSET = 2;
+
 export default class HeroMover {
   constructor( hero, iks, bonePoints, worldGrid, camera, scene ) {
     this.scene = scene
@@ -27,10 +33,11 @@ export default class HeroMover {
     this.bonePoints = bonePoints;
 
     this.worldGrid = worldGrid;
+
     this.camera = camera;
     this.pivot = new THREE.Object3D()
     this.pivot.position.copy(hero.position)
-    this.hero.add(this.camera)
+    // this.hero.add(this.camera)
     scene.add(this.pivot)
 
     this.camera.position.set(0,10,50)
@@ -46,6 +53,8 @@ export default class HeroMover {
     this.moving = true;
     this.pos = 0
     this.tweener = new ParabolicFootTweener()
+    this.startTime = Date.now()
+    this.raycaster = new THREE.Raycaster()
 
     //worldAxis helpers
     this.worldAxis = {
@@ -91,31 +100,29 @@ export default class HeroMover {
       this.alignArrowHelper()
     }
 
+    //deprecated after world grid changes. TODO; come back to this.
     //step both feet when necessary while turning
-
-    for (var i = 0; i < 2; i++){
-      var foot = this.bonePoints[i];
-      //set foot position to the left of mouse base
-
-      var tmpPos = new THREE.Vector3();
-      tmpPos.x = this.hero.position.x + 3*(2*i-1)*this.worldAxis.left.x -3*this.worldAxis.up.x + 0.5*this.worldAxis.forward.x
-      tmpPos.y = this.hero.position.y + 3*(2*i-1)*this.worldAxis.left.y -3*this.worldAxis.up.y + 0.5*this.worldAxis.forward.y
-      tmpPos.z = this.hero.position.z + 3*(2*i-1)*this.worldAxis.left.z -3*this.worldAxis.up.z + 0.5*this.worldAxis.forward.z
-
-      var nn = this.findNearestCollisionPoint(tmpPos)
-
-      if(nn[0]) {
-        this.incomingPos.copy(tmpPos).add(nn[1])
-
-        if(this.incomingPos.distanceTo(foot.position) < 3){
-          return;
-        }
-
-        this.incomingPos.set(Math.round(this.incomingPos.x),Math.round(this.incomingPos.y),Math.round(this.incomingPos.z))
-        // foot.position.copy(this.incomingPos)
-        this.tweener.addTween(i, foot.position, this.incomingPos, this.worldAxis.up.clone().multiplyScalar(2), 20);
-      }
-    }
+    // for (var i = 0; i < 2; i++){
+    //   var foot = this.bonePoints[i];
+    //   //set foot position to the left of mouse base
+    //   this.incomingPos.x = this.hero.position.x + 3*(2*i-1)*this.worldAxis.left.x -3*this.worldAxis.up.x + 0.5*this.worldAxis.forward.x
+    //   this.incomingPos.y = this.hero.position.y + 3*(2*i-1)*this.worldAxis.left.y -3*this.worldAxis.up.y + 0.5*this.worldAxis.forward.y
+    //   this.incomingPos.z = this.hero.position.z + 3*(2*i-1)*this.worldAxis.left.z -3*this.worldAxis.up.z + 0.5*this.worldAxis.forward.z
+    //
+    //   var nn = this.findNearestCollisionPoint(this.incomingPos)
+    //
+    //   if(nn[0]) {
+    //     this.incomingPos.add(nn[1])
+    //
+    //     if(this.incomingPos.distanceTo(foot.position) < 3){
+    //       return;
+    //     }
+    //
+    //     this.incomingPos.set(Math.round(this.incomingPos.x),Math.round(this.incomingPos.y),Math.round(this.incomingPos.z))
+    //     // foot.position.copy(this.incomingPos)
+    //     this.tweener.addTween(i, foot.position, this.incomingPos, this.worldAxis.up.clone().multiplyScalar(2), 20);
+    //   }
+    // }
   }
 
   endRotate = (event) => {
@@ -128,62 +135,65 @@ export default class HeroMover {
       return;
     }
 
+    var msElapsed = Date.now() - this.startTime;
+    if(msElapsed < 1000){
+      return;
+    }
+
+    this.startTime = Date.now()
     this.curBone += 1;
     this.recalculateWorldAxis()
 
     //base position is going to correspond to the foot ..
     var foot = this.bonePoints[(this.curBone+1)%2];
-
+    var curFootOffset = HERO_HALF_WIDTH*(2*((this.curBone+1)%2)-1);
     //set foot position to the left of mouse base
-    foot.position.x = this.hero.position.x + 3*(2*((this.curBone+1)%2)-1)*this.worldAxis.left.x -2*this.worldAxis.up.x + 4*this.worldAxis.forward.x
-    foot.position.y = this.hero.position.y + 3*(2*((this.curBone+1)%2)-1)*this.worldAxis.left.y -2*this.worldAxis.up.y + 4*this.worldAxis.forward.y
-    foot.position.z = this.hero.position.z + 3*(2*((this.curBone+1)%2)-1)*this.worldAxis.left.z -2*this.worldAxis.up.z + 4*this.worldAxis.forward.z
+    this.incomingPos.x = this.hero.position.x + curFootOffset*this.worldAxis.left.x  + HERO_LEG_FORWARD_OFFSET*this.worldAxis.forward.x + HERO_HEIGHT*this.worldAxis.up.x
+    this.incomingPos.y = this.hero.position.y + curFootOffset*this.worldAxis.left.y  + HERO_LEG_FORWARD_OFFSET*this.worldAxis.forward.y + HERO_HEIGHT*this.worldAxis.up.y
+    this.incomingPos.z = this.hero.position.z + curFootOffset*this.worldAxis.left.z  + HERO_LEG_FORWARD_OFFSET*this.worldAxis.forward.z + HERO_HEIGHT*this.worldAxis.up.z
 
     if(DEBUG_MODE){
       this.alignArrowHelper();
     }
-    var nn = this.findNearestCollisionPoint(foot.position)
-    if(nn[0]) {
-      this.incomingPos.copy(foot.position).add(nn[1])
+    var tt = this.findNearestCollisionPoint(this.incomingPos)
+    if(tt[0]) {
+      this.incomingPos.copy(tt[1])
       this.incomingPos.set(Math.round(this.incomingPos.x),Math.round(this.incomingPos.y),Math.round(this.incomingPos.z))
-      var upNew = this.alignHeroToGround(nn);
+      var upNew = this.alignHeroToGround(tt);
 
-      //with the new forward, move the hero forward a bit
-      var foot2 = this.bonePoints[(this.curBone)%2];
+      //tween hero foot position
+      this.tweener.addTween((this.curBone)%2, foot.position, this.incomingPos, this.worldAxis.up, 60);
 
-      var newHeroPos = new THREE.Vector3().addVectors(foot2.position, foot.position).multiplyScalar(0.5)
-      newHeroPos.add(upNew.multiplyScalar(1))
-      this.hero.position.copy(newHeroPos)
-      this.pivot.position.copy(newHeroPos)
-
-      this.tweener.addTween(this.curBone, foot.position, this.incomingPos, upNew, 60);
+      //tween hero body position
+      this.incomingPos.sub(this.worldAxis.forward.multiplyScalar(5))
+      this.incomingPos.sub(this.worldAxis.left.multiplyScalar(curFootOffset))
+      var tween = new TWEEN.Tween(this.hero.position).to(this.incomingPos, 200).delay(200).start();
     }
   }
 
-
   findNearestCollisionPoint = (basePos) => {
     var {forward, up} = this.worldAxis;
-
     var minDist = 100
     var min = [0,0,0,0]
     var found = false
     var axis = new THREE.Vector3().crossVectors(forward, up)
     var raycastQuat = new THREE.Quaternion();
     var raycastDir = new THREE.Vector3();
+    var meshes = this.worldGrid.queryPointsInRadius(basePos.x, basePos.y, basePos.z)
 
-    for ( var i = -Math.PI/2; i < Math.PI/2; i += 0.3){
+    for ( var i = -Math.PI/2; i < Math.PI/5; i += 0.3){
       raycastQuat.setFromAxisAngle(axis, i)
       raycastDir.copy(forward).applyQuaternion(raycastQuat)
-      for ( var j = 0; j < 10; j+=1) {
-        var value = this.worldGrid.valueAtWorldPos(basePos.x + j*raycastDir.x, basePos.y + j*raycastDir.y, basePos.z + j*raycastDir.z);
-        if(value){
-          if(Math.abs(i)< minDist){
-            minDist = (Math.abs(i))
-            min = [new THREE.Vector3(j*raycastDir.x, j*raycastDir.y, j*raycastDir.z), new THREE.Vector3(value[0], value[1], value[2])]
-            found = true;
-            break;
-          }
+      this.raycaster.set(basePos, raycastDir)
+      var n = this.raycaster.intersectObjects(meshes);
+      if(Math.abs(i)< minDist && n[0] && n[0].point.distanceTo(basePos) < 20){
+        minDist = (Math.abs(i))
+        var mult = 1
+        if(n[0].object.material.side == THREE.BackSide){
+          mult = -1
         }
+        min = [n[0].point, n[0].face.normal.clone().multiplyScalar(mult)]
+        found = true;
       }
     }
     return [found, min[0], min[1]]
@@ -191,14 +201,6 @@ export default class HeroMover {
 
   alignHeroToGround = (nn) => {
     var {forward, up} = this.worldAxis;
-
-    var leftAxis = new THREE.Vector3().crossVectors(forward, up)
-    var forwardAdjustAngle = forward.angleTo(nn[1])
-
-    if(forwardAdjustAngle > 0.01 && forwardAdjustAngle < 3.14){
-      var forwardAdjustQuat = new THREE.Quaternion().setFromAxisAngle(leftAxis, forwardAdjustAngle);
-      this.hero.quaternion.premultiply(forwardAdjustQuat)
-    }
 
     //adjust quaternion so up vector and surface normal are aligned
     var upNew = new THREE.Vector3(0,1,0).applyQuaternion(this.hero.quaternion).normalize()
@@ -244,6 +246,7 @@ export default class HeroMover {
   // }
 
   update() {
+    TWEEN.update()
     this.tweener.update()
     if(this.iks){
       this.iks.forEach((ik)=>{

@@ -1,27 +1,28 @@
 import Stats from 'stats-js';
 import GlowShader from './GlowShader';
 import ParallaxCorrectPhysicalMaterial from './ParallaxCorrectPhysicalMaterial';
-import WorldGrid from './WorldGrid';
 import HeroMoverNN from './HeroMoverNN';
 import EnvMapController from './EnvMapController';
 import { IK, IKChain, IKJoint, IKBallConstraint, IKHelper } from './three-ik/src';
-import FBXLoader from './FBXLoader'
+import FBXLoader from './FBXLoader';
+import SparseWorldGrid from './SparseWorldGrid';
+
 import initRect from './rectAreaLights';
 initRect();
 let THREE = require('three');
 let OBJLoader = require('three-obj-loader')(THREE);
 let OrbitControls = require('three-orbit-controls')(THREE);
 
-function promisifyLoader ( loader, onProgress ) {
-  function promiseLoader ( url ) {
-    return new Promise( ( resolve, reject ) => {
-      loader.load( url, resolve, onProgress, reject );
-    } );
-  }
-  return {
-    originalLoader: loader,
-    load: promiseLoader,
-  };
+function promisifyLoader(loader, onProgress) {
+    function promiseLoader(url) {
+        return new Promise((resolve, reject) => {
+            loader.load(url, resolve, onProgress, reject);
+        });
+    }
+    return {
+        originalLoader: loader,
+        load: promiseLoader,
+    };
 }
 
 let scene, camera, renderer, controls;
@@ -139,17 +140,15 @@ export default function initWebScene() {
     let hemisphere = new THREE.Mesh(new THREE.SphereGeometry(40), new THREE.MeshPhysicalMaterial({
     }));
     hemisphere.geometry.computeFaceNormals();
-    hemisphere.position.set(80,-80,0)
+    hemisphere.position.set(80, -80, 0);
     scene.add(hemisphere);
 
-    const objLoader = promisifyLoader( new THREE.OBJLoader() );
+    const objLoader = promisifyLoader(new THREE.OBJLoader());
 
-    var pipes = objLoader.load(require('./assets/pipe-01.obj')).then( (asset) => {
+    let pipes = objLoader.load(require('./assets/pipe-01.obj')).then((asset) => {
         let mesh = asset.children[0];
         mesh.scale.set(50, 50, 50);
-        // mesh.position.set(10, -40, 35);
         scene.add(mesh);
-        worldGrid.fillGridForBufferMesh(mesh, scene);
     });
 
     /** LOADING HERO MESH. SOMEONE HELP HERE THIS IS A MESS
@@ -159,87 +158,86 @@ export default function initWebScene() {
     #3 start the hero mover
 
     **/
-    const fbxLoader = promisifyLoader( new FBXLoader() );
+    const fbxLoader = promisifyLoader(new FBXLoader());
 
-    var ratPromise = fbxLoader.load(require('./assets/rat-03.fbx')).then((ratMesh) => {
-      scene.add(ratMesh)
-      var hero = ratMesh;
-      hero.scale.set(1,1,1)
-      hero.position.set(0,-55,0)
-      var bonePoints = []
-      var boneGeo = new THREE.BoxGeometry(1,1,1)
-      var boneMat = new THREE.MeshPhysicalMaterial({color:'0xff00ff', wireframe: true})
-      var numBones = 2;
-      for(var i =0 ; i < numBones; i++){
-        var mesh = new THREE.Mesh(boneGeo, boneMat)
-        mesh.position.set(3*(2*i - 1), -49, 2)
-        bonePoints.push(mesh)
-        scene.add(mesh)
-      }
-      console.log(ratMesh)
-
-      var rat = ratMesh.children[0]
-      rat.material = new THREE.MeshPhysicalMaterial({
-        skinning: true,
-        color: new THREE.Color("#0ff0ff"),
-        // opacity: 0.4,
-        transparent: true,
-      })
-
-      var boneGroup = ratMesh.children[1].children[0];
-      var helper = new THREE.SkeletonHelper( boneGroup );
-      helper.material.linewidth = 5;
-      scene.add( helper )
-
-      // rat
-      //make a chain connecting the legs
-      var iks = []
-      for (var j = 0; j < 2; j++){
-        var ik = new IK();
-        const chain = new IKChain();
-        var currentBone = boneGroup.children[j];
-        for (let i = 0; i < 4; i++) {
-          currentBone = currentBone.children[0]
-          var constraints = [new IKBallConstraint(180)];
-          if(i==3){
-            constraints = [new IKBallConstraint(10)];
-          }
-          if(i==0){
-            constraints = null;
-          }
-          // The last IKJoint must be added with a `target` as an end effector.
-          const target = i === 3 ? bonePoints[Math.abs(1-j)] : null;
-          chain.add(new IKJoint(currentBone, { constraints }), { target });
+    let ratPromise = fbxLoader.load(require('./assets/rat-03.fbx')).then((ratMesh) => {
+        scene.add(ratMesh);
+        let hero = ratMesh;
+        hero.scale.set(1, 1, 1);
+        hero.position.set(0, -48, 0);
+        let bonePoints = [];
+        let boneGeo = new THREE.BoxGeometry(1, 1, 1);
+        let boneMat = new THREE.MeshPhysicalMaterial({ color:'0xff00ff', wireframe: true });
+        let numBones = 2;
+        for(let i = 0; i < numBones; i++) {
+            let mesh = new THREE.Mesh(boneGeo, boneMat);
+            mesh.position.set(3 * (2 * i - 1), -49, 2);
+            bonePoints.push(mesh);
+            scene.add(mesh);
         }
-        ik.add(chain);
-        iks.push(ik)
+        console.log(ratMesh);
 
-        var helper2 = new IKHelper(ik);
-        scene.add(helper2)
-      }
-      heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
-    })
+        let rat = ratMesh.children[0];
+        rat.material = new THREE.MeshPhysicalMaterial({
+            skinning: true,
+            color: new THREE.Color('#0ff0ff'),
+            // opacity: 0.4,
+            transparent: true,
+        });
 
-    //start the render loop once all objs/fbx things are done loading
-    Promise.all( [pipes, ratPromise] ).then( () => {
-      update();
+        let boneGroup = ratMesh.children[1].children[0];
+        let helper = new THREE.SkeletonHelper(boneGroup);
+        helper.material.linewidth = 5;
+        scene.add(helper);
+
+        // rat
+        // make a chain connecting the legs
+        let iks = [];
+        for (let j = 0; j < 2; j++) {
+            let ik = new IK();
+            const chain = new IKChain();
+            let currentBone = boneGroup.children[j];
+            for (let i = 0; i < 4; i++) {
+                currentBone = currentBone.children[0];
+                let constraints = [ new IKBallConstraint(180) ];
+                if(i == 3) {
+                    constraints = [ new IKBallConstraint(10) ];
+                }
+                if(i == 0) {
+                    constraints = null;
+                }
+                // The last IKJoint must be added with a `target` as an end effector.
+                const target = i === 3 ? bonePoints[Math.abs(1 - j)] : null;
+                chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
+            }
+            ik.add(chain);
+            iks.push(ik);
+
+            let helper2 = new IKHelper(ik);
+            scene.add(helper2);
+        }
+        heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
+    });
+
+    // start the render loop once all objs/fbx things are done loading
+    Promise.all([ pipes, ratPromise ]).then(() => {
+        update();
     });
 
     envMapController = new EnvMapController([ groundFloor ], cubeCamera, renderer, scene);
 
-    //initialize collision world grid and fill in the necessary meshes
-    worldGrid = new WorldGrid(300, 200, 300, new THREE.Vector3(150, 100, 150));
-    worldGrid.fillGridForMesh(roomWall, scene);
-    worldGrid.fillGridForMesh(glowTorusMain, scene);
-    worldGrid.fillGridForMesh(hemisphere, scene);
+    // initialize collision world grid and fill in the necessary meshes
+    worldGrid = new SparseWorldGrid();
+    worldGrid.fillGridFromBoundingBox(roomWall, scene);
+    worldGrid.fillGridFromBoundingBox(hemisphere, scene);
 }
 
 function update() {
     requestAnimationFrame(update);
     stats.begin();
     envMapController.update();
-    if(heroMover){
-      heroMover.update();
+    if(heroMover) {
+        heroMover.update();
     }
     // sorry about dis
     groundFloor.material.uniforms.maxMipLevel.value = renderer.properties.get(groundFloor.material.envMap).__maxMipLevel;
