@@ -28,7 +28,7 @@ function promisifyLoader(loader, onProgress) {
 let scene, camera, renderer, controls;
 let stats, envMapController, heroMover;
 let cubeCamera, groundFloor;
-let worldGrid;
+let worldGrid, backHip, tailPoint;
 export default function initWebScene() {
   /** BASIC THREE SETUP **/
     scene = new THREE.Scene();
@@ -151,6 +151,19 @@ export default function initWebScene() {
         scene.add(mesh);
     });
 
+    let buildings = objLoader.load(require('./assets/building-01.obj')).then((asset) => {
+        let mesh = asset.children[0];
+        mesh.material = new THREE.MeshPhysicalMaterial()
+        // scene.add(mesh);
+    });
+
+    let rat = objLoader.load(require('./assets/rat-01.obj')).then((asset) => {
+        let mesh = asset.children[0];
+        mesh.scale.set(10,10,10)
+        mesh.material = new THREE.MeshPhysicalMaterial()
+        scene.add(mesh);
+    });
+
     /** LOADING HERO MESH. SOMEONE HELP HERE THIS IS A MESS
 
     #1 set rat feet target points
@@ -168,16 +181,34 @@ export default function initWebScene() {
         let bonePoints = [];
         let boneGeo = new THREE.BoxGeometry(1, 1, 1);
         let boneMat = new THREE.MeshPhysicalMaterial({ color:'0xff00ff', wireframe: true });
-        let numBones = 2;
-        for(let i = 0; i < numBones; i++) {
+        let numFeet = 2;
+        //backfeet
+        for(let i = 0; i < numFeet; i++) {
             let mesh = new THREE.Mesh(boneGeo, boneMat);
             mesh.position.set(3 * (2 * i - 1), -49, 2);
             bonePoints.push(mesh);
             scene.add(mesh);
         }
-        console.log(ratMesh);
+        //front feet
+        for(let i = 0; i < numFeet; i++) {
+            let mesh = new THREE.Mesh(boneGeo, boneMat);
+            mesh.position.set(3 * (2 * i - 1), -49, -10);
+            bonePoints.push(mesh);
+            scene.add(mesh);
+        }
+        let headPoint = new THREE.Mesh(boneGeo, boneMat);
+        headPoint.position.set(0, -43, -12);
+        bonePoints.push(headPoint);
+        scene.add(headPoint)
+
+        tailPoint = new THREE.Mesh(boneGeo, boneMat);
+        tailPoint.position.set(-1, -47, 11);
+        bonePoints.push(tailPoint);
+        scene.add(tailPoint)
+
 
         let rat = ratMesh.children[0];
+
         rat.material = new THREE.MeshPhysicalMaterial({
             skinning: true,
             color: new THREE.Color('#0ff0ff'),
@@ -185,14 +216,45 @@ export default function initWebScene() {
             transparent: true,
         });
 
-        let boneGroup = ratMesh.children[1].children[0];
+        let boneGroup = ratMesh.children[1];
+        boneGroup.position.set(0,0,0)
+        boneGroup.rotateY(Math.PI/2)
+        boneGroup.position.set(0,6.33,0)
+
         let helper = new THREE.SkeletonHelper(boneGroup);
         helper.material.linewidth = 5;
         scene.add(helper);
+        console.log(boneGroup)
 
         // rat
         // make a chain connecting the legs
         let iks = [];
+        //backfeet
+        for (let j = 0; j < 2; j++) {
+            let ik = new IK();
+            const chain = new IKChain();
+            let currentBone = boneGroup.children[j+1];
+            for (let i = 0; i < 4; i++) {
+                currentBone = currentBone.children[0];
+                let constraints = [ new IKBallConstraint(180) ];
+                if(i == 3) {
+                    constraints = [ new IKBallConstraint(10) ];
+                }
+                if(i == 0) {
+                    constraints = null;
+                }
+                // The last IKJoint must be added with a `target` as an end effector.
+                const target = i === 3 ? bonePoints[j] : null;
+                chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
+            }
+            ik.add(chain);
+            iks.push(ik);
+
+            let helper2 = new IKHelper(ik);
+            scene.add(helper2);
+        }
+        boneGroup = ratMesh.children[1].children[3].children[0].children[0]
+        //front feet
         for (let j = 0; j < 2; j++) {
             let ik = new IK();
             const chain = new IKChain();
@@ -207,15 +269,55 @@ export default function initWebScene() {
                     constraints = null;
                 }
                 // The last IKJoint must be added with a `target` as an end effector.
-                const target = i === 3 ? bonePoints[Math.abs(1 - j)] : null;
+                const target = i === 3 ? bonePoints[j+2] : null;
                 chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
             }
             ik.add(chain);
             iks.push(ik);
-
             let helper2 = new IKHelper(ik);
             scene.add(helper2);
         }
+
+        //ad ik for the spine
+        // boneGroup = ratMesh.children[1].children[3]
+        backHip = ratMesh.children[1].children[3]
+        // let ik = new IK();
+        // const chain = new IKChain();
+        // let currentBone = boneGroup.children[0];
+        // for (let i = 0; i < 5; i++) {
+        //     if(i==1){
+        //       currentBone = currentBone.children[2];
+        //     } else {
+        //       currentBone = currentBone.children[0];
+        //     }
+        //     console.log(currentBone)
+        //     let constraints = [ new IKBallConstraint(180) ];
+        //     // The last IKJoint must be added with a `target` as an end effector.
+        //     const target = i === 4 ? null: null;
+        //     chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
+        // }
+        // ik.add(chain);
+        // iks.push(ik);
+        // let helper2 = new IKHelper(ik);
+        // scene.add(helper2);
+
+        // ad ik for the tail
+        var currentBone = ratMesh.children[1].children[0]
+        var tail = ratMesh.children[1].children[0]
+        let ik = new IK();
+        const chain = new IKChain();
+        for (let i = 0; i < 7; i++) {
+            currentBone = currentBone.children[0];
+            console.log(currentBone)
+            let constraints = [ new IKBallConstraint(360, false) ];
+            // The last IKJoint must be added with a `target` as an end effector.
+            const target = i === 6 ? bonePoints[5]: null;
+            chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
+        }
+        ik.add(chain);
+        iks.push(ik);
+        let helper2 = new IKHelper(ik);
+        scene.add(helper2);
         heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
     });
 
@@ -233,6 +335,7 @@ export default function initWebScene() {
 }
 
 function update() {
+    backHip.position.y = 0.5 + 0.5*Math.sin(Date.now()*0.001)
     requestAnimationFrame(update);
     stats.begin();
     envMapController.update();

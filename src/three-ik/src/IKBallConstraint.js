@@ -14,7 +14,8 @@ class IKBallConstraint {
    *
    * @param {number} angle
    */
-  constructor(angle) {
+  constructor(angle, axisAligned=true) {
+    this.axisAligned = axisAligned;
     this.angle = angle;
     this.rotationPlane = new Plane(X_AXIS);
   }
@@ -50,16 +51,13 @@ class IKBallConstraint {
 
     //project direction on the rotation plane. right now i'm assuming that there is always
     //a rotation plane and it is the local x axis.. TODO: to make this configurable
-    const rotationPlaneNormal = joint._localToWorldDirection(new Vector3().copy(X_AXIS)).normalize();
-    this.rotationPlane.normal = rotationPlaneNormal
+    if(this.axisAligned){
+      const rotationPlaneNormal = joint._localToWorldDirection(new Vector3().copy(X_AXIS)).normalize();
+      this.rotationPlane.normal = rotationPlaneNormal
 
-    this.rotationPlane.projectPoint(direction, parentDirection)
-    joint._setDirection(parentDirection);
-
-
-
-    return true;
-
+      this.rotationPlane.projectPoint(direction, parentDirection)
+      joint._setDirection(parentDirection);
+    }
     return false;
   }
 }
