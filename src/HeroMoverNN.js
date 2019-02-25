@@ -1,5 +1,5 @@
 import ParabolicFootTweener from './Tweener'
-
+import { addScalarMultiple, getAlignmentQuaternion, getAlignmentQuaternionOnPlane } from './MathUtils'
 var THREE = require('three');
 var TWEEN = require('tween');
 
@@ -21,16 +21,9 @@ move mouse to rotate camera around the hero
 const DEBUG_MODE = false;
 
 //hero constants
-const HERO_HALF_WIDTH = 1.3;
+const HERO_HALF_WIDTH = 1.5;
 const HERO_HEIGHT = 4;
 const HERO_LEG_FORWARD_OFFSET = 1;
-
-var addScalarMultiple = (toVector, fromVector, scalar) => {
-  toVector.x += fromVector.x*scalar;
-  toVector.y += fromVector.y*scalar;
-  toVector.z += fromVector.z*scalar;
-  return toVector;
-}
 
 export default class HeroMover {
   constructor( hero, iks, bonePoints, worldGrid, camera, scene ) {
@@ -44,8 +37,12 @@ export default class HeroMover {
     this.camera = camera;
     this.pivot = new THREE.Object3D()
     this.pivot.position.copy(hero.position)
-    this.hero.add(this.camera)
+    // this.hero.add(this.camera)
     scene.add(this.pivot)
+
+    this.heroCamera = new THREE.Object3D()
+    scene.add(this.heroCamera)
+    this.heroCamera.add(this.camera)
 
     this.camera.position.set(0,10,50)
 
@@ -59,13 +56,18 @@ export default class HeroMover {
     this.velocity = new THREE.Vector3()
     this.moving = true;
     this.pos = 0
-    this.tweener = new ParabolicFootTweener()
+    this.tweener = new ParabolicFootTweener(this)
     this.startTime = Date.now()
     this.raycaster = new THREE.Raycaster()
     this.tailMotionCounter = -1;
 
     //worldAxis helpers
     this.worldAxis = {
+      forward: new THREE.Vector3(),
+      up: new THREE.Vector3(),
+      left: new THREE.Vector3()
+    }
+    this.heroAxis = {
       forward: new THREE.Vector3(),
       up: new THREE.Vector3(),
       left: new THREE.Vector3()
@@ -100,8 +102,7 @@ export default class HeroMover {
     this.lastMousePos.set(event.x, event.y)
 
     //can only rotate around the y axis
-    this.hero.rotateY(this.delta.x*0.01)
-
+    this.heroCamera.rotateY(this.delta.x*0.01)
     this.recalculateWorldAxis();
 
     if(DEBUG_MODE){
@@ -110,6 +111,7 @@ export default class HeroMover {
 
     //deprecated after world grid changes. TODO; come back to this.
     //step both feet when necessary while turning
+    var tailBone = this.bonePoints[5]
     for (var i = 0; i < 2; i++){
       var foot = this.bonePoints[i];
       var forwardFoot = this.bonePoints[i+2];
@@ -119,15 +121,25 @@ export default class HeroMover {
 
       if(nn[0]) {
         this.incomingPos.copy(nn[1])
-        if(this.incomingPos.distanceTo(foot.position) < 3){
+        if(this.incomingPos.distanceTo(foot.position) < 2.5){
           return;
         }
+
         this.incomingPos.set(Math.round(this.incomingPos.x),Math.round(this.incomingPos.y),Math.round(this.incomingPos.z))
-        this.tweener.addTween(i, foot.position, this.incomingPos, this.worldAxis.up.clone().multiplyScalar(2), 20);
+        this.tweener.addTween(i, foot.position, this.incomingPos, this.worldAxis.up.clone().multiplyScalar(1), 40, true);
 
         //move foot in front too
         var forwardFootPos = addScalarMultiple(this.incomingPos.clone(), this.worldAxis.forward, 4)
-        this.tweener.addTween(i+2, forwardFoot.position, forwardFootPos, this.worldAxis.up, 20);
+        this.tweener.addTween(i+2, forwardFoot.position, forwardFootPos, this.worldAxis.up.clone().multiplyScalar(1), 40, true);
+
+        //move tail behind
+        var tailPos = this.adjustPosForTail(this.incomingPos.clone())
+        tailPos = addScalarMultiple(tailPos, this.worldAxis.forward, -10)
+
+        var tailTween = new TWEEN.Tween(tailBone.position).to(tailPos, 50).start();
+        this.stagnantTale = true;
+        setTimeout(() => {this.stagnantTale = false}, 50)
+
       }
     }
   }
@@ -173,6 +185,7 @@ export default class HeroMover {
       var upNew = this.alignHeroToGround(tt);
 
       //tween back foot position
+      addScalarMultiple(this.incomingPos, upNew, 1)
       this.tweener.addTween((this.curBone)%2, foot.position, this.incomingPos, this.worldAxis.up, 60);
 
       //tween front foot position
@@ -182,6 +195,7 @@ export default class HeroMover {
       //tween body position
       var heroPos = this.adjustPosForHero(this.incomingPos, curFootOffset, upNew)
       var tween = new TWEEN.Tween(this.hero.position).to(heroPos, 200).delay(200).start();
+      var tween2 = new TWEEN.Tween(this.heroCamera.position).to(heroPos, 200).delay(200).start();
 
       //tween tail position
       var tailPos = this.adjustPosForTail(this.incomingPos.clone())
@@ -223,12 +237,12 @@ export default class HeroMover {
     var raycastDir = new THREE.Vector3();
     var meshes = this.worldGrid.queryPointsInRadius(basePos.x, basePos.y, basePos.z)
 
-    for ( var i = -Math.PI/2; i < Math.PI/5; i += 0.3){
+    for ( var i = -Math.PI/2; i < Math.PI/5; i += 0.1){
       raycastQuat.setFromAxisAngle(axis, i)
       raycastDir.copy(forward).applyQuaternion(raycastQuat)
       this.raycaster.set(basePos, raycastDir)
       var n = this.raycaster.intersectObjects(meshes);
-      if(Math.abs(i)< minDist && n[0] && n[0].point.distanceTo(basePos) < 15){
+      if(Math.abs(i)< minDist && n[0] && n[0].point.distanceTo(basePos) < 13){
         minDist = (Math.abs(i))
         var mult = 1
         if(n[0].object.material.side == THREE.BackSide){
@@ -246,15 +260,12 @@ export default class HeroMover {
 
   alignHeroToGround = (nn) => {
     var {forward, up} = this.worldAxis;
-
     //adjust quaternion so up vector and surface normal are aligned
     var upNew = new THREE.Vector3(0,1,0).applyQuaternion(this.hero.quaternion).normalize()
-    var upAdjustAxis = new THREE.Vector3().crossVectors(upNew, nn[2]).normalize()
-    var upAdjustAngle = upNew.angleTo(nn[2])
-
-    if(upAdjustAngle > 0.01 && upAdjustAngle < 3.14){
-      var upAdjustQuat = new THREE.Quaternion().setFromAxisAngle(upAdjustAxis, upAdjustAngle);
+    var upAdjustQuat = getAlignmentQuaternion(upNew, nn[2]);
+    if(upAdjustQuat){
       this.hero.quaternion.premultiply(upAdjustQuat)
+      this.heroCamera.quaternion.premultiply(upAdjustQuat)
     }
     return upNew;
   }
@@ -267,38 +278,40 @@ export default class HeroMover {
   }
 
   recalculateWorldAxis = () => {
-    this.worldAxis.forward.set(0,0,-1).applyQuaternion(this.hero.quaternion)
-    this.worldAxis.up.set(0,1,0).applyQuaternion(this.hero.quaternion)
-    this.worldAxis.left.set(1,0,0).applyQuaternion(this.hero.quaternion)
+    this.worldAxis.forward.set(0,0,-1).applyQuaternion(this.heroCamera.quaternion)
+    this.worldAxis.up.set(0,1,0).applyQuaternion(this.heroCamera.quaternion)
+    this.worldAxis.left.set(1,0,0).applyQuaternion(this.heroCamera.quaternion)
   }
 
-  // handleBoundingBoxCollision(boundingBox, incomingPos){
-  //   var minmax = [
-  //     boundingBox.min,
-  //     boundingBox.max,
-  //   ]
-  //   for(var i =0; i<2; i++){
-  //     for(var j =0; j<2; j++){
-  //       for(var k =0; k<2; k++){
-  //         var value = this.worldGrid.valueAtWorldPos(this.incomingPos.x+minmax[i].x, this.incomingPos.y+minmax[j].y, this.incomingPos.z+minmax[k].z);
-  //         if ( value > 0 ) {
-  //           return [false, i,j,k]
-  //         }
-  //       }
-  //     }
-  //   }
-  //   return [true, 1, 1, 1]
-  // }
+  recalculateHeroAxis = () => {
+    this.heroAxis.forward.set(0,0,-1).applyQuaternion(this.hero.quaternion)
+    this.heroAxis.up.set(0,1,0).applyQuaternion(this.hero.quaternion)
+    this.heroAxis.left.set(1,0,0).applyQuaternion(this.hero.quaternion)
+  }
 
   updateTailPos = () => {
     this.tailMotionCounter += 0.02
     var tailBone = this.bonePoints[5];
-    tailBone.position.x += 0.015*this.worldAxis.left.clone().multiplyScalar(Math.sin(this.tailMotionCounter)).x
-    tailBone.position.y += 0.015*this.worldAxis.left.clone().multiplyScalar(Math.sin(this.tailMotionCounter)).y
-    tailBone.position.z += 0.015*this.worldAxis.left.clone().multiplyScalar(Math.sin(this.tailMotionCounter)).z
+    addScalarMultiple(tailBone.position, this.worldAxis.left, 0.015*Math.sin(this.tailMotionCounter))
+  }
+
+  updateHeroRotation() {
+    var forwardFootLeft = this.bonePoints[2]
+    var forwardFootRight = this.bonePoints[3]
+
+    this.recalculateHeroAxis()
+
+    var newForward = new THREE.Vector3().addVectors(forwardFootLeft.position, forwardFootRight.position).multiplyScalar(0.5)
+    newForward.sub(this.hero.position).normalize()
+
+    var forwardAdjustQuat = getAlignmentQuaternionOnPlane(newForward, this.heroAxis.forward, this.heroAxis.up)
+    if(forwardAdjustQuat){
+      this.hero.quaternion.premultiply(forwardAdjustQuat)
+    }
   }
 
   update() {
+
     if(!this.stagnantTale){
       this.updateTailPos();
     }

@@ -1,5 +1,5 @@
 import { Quaternion, Matrix4, Vector3 } from 'three';
-import { transformPoint, getCentroid, getWorldPosition, setQuaternionFromDirection } from './utils.js';
+import { transformPoint, getCentroid, getWorldPosition, setQuaternionFromDirection, setFixedQuaternionFromDirection } from './utils.js';
 import IKBallConstraint from './IKBallConstraint.js';
 
 const Y_AXIS = new Vector3(0, 1, 0);
@@ -178,10 +178,11 @@ class IKJoint {
 
       this._worldToLocalDirection(direction);
 
-      var pos = new Vector3();
-      pos.addVectors(direction, this.bone.position);
-      this.bone.lookAt(pos);
-      setQuaternionFromDirection(direction, Y_AXIS, this.bone.quaternion);
+      if(this._isAxisAligned()) {
+        setFixedQuaternionFromDirection(direction, Y_AXIS, this.bone.quaternion);
+      } else {
+        setQuaternionFromDirection(direction, Y_AXIS, this.bone.quaternion);
+      }
     } else {
       this.bone.position.copy(position);
     }
@@ -199,6 +200,16 @@ class IKJoint {
    */
   _getWorldDistance(joint) {
     return this._worldPosition.distanceTo(joint.isIKJoint ? joint._getWorldPosition() : getWorldPosition(joint, new Vector3()));
+  }
+
+  _isAxisAligned() {
+    //TODO: axis aligned should be another constraint..
+    if(this.constraints[0]){
+      if(this.constraints[0].axisAligned){
+        return true;
+      }
+    }
+    return false;
   }
 }
 

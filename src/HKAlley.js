@@ -234,17 +234,17 @@ export default function initWebScene() {
             let ik = new IK();
             const chain = new IKChain();
             let currentBone = boneGroup.children[j+1];
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 3; i++) {
                 currentBone = currentBone.children[0];
                 let constraints = [ new IKBallConstraint(180) ];
-                if(i == 3) {
-                    constraints = [ new IKBallConstraint(10) ];
+                if(i == 2) {
+                    constraints = [ new IKBallConstraint(180) ];
                 }
                 if(i == 0) {
                     constraints = null;
                 }
                 // The last IKJoint must be added with a `target` as an end effector.
-                const target = i === 3 ? bonePoints[j] : null;
+                const target = i === 2 ? bonePoints[j] : null;
                 chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
             }
             ik.add(chain);
@@ -259,17 +259,17 @@ export default function initWebScene() {
             let ik = new IK();
             const chain = new IKChain();
             let currentBone = boneGroup.children[j];
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 3; i++) {
                 currentBone = currentBone.children[0];
                 let constraints = [ new IKBallConstraint(180) ];
-                if(i == 3) {
+                if(i == 2) {
                     constraints = [ new IKBallConstraint(10) ];
                 }
                 if(i == 0) {
                     constraints = null;
                 }
                 // The last IKJoint must be added with a `target` as an end effector.
-                const target = i === 3 ? bonePoints[j+2] : null;
+                const target = i === 2 ? bonePoints[j+2] : null;
                 chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
             }
             ik.add(chain);

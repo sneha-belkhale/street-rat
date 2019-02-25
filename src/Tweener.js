@@ -2,13 +2,14 @@
 let THREE = require('three');
 
 export default class ParabolicFootTweener {
-    constructor() {
+    constructor(mover) {
         this.tweens = [];
         this.helperVec = new THREE.Vector3();
         this.tweenKeys = {};
+        this.mover = mover;
     }
 
-    addTween(key, fromVector, toVector, upVector, totalSteps) {
+    addTween(key, fromVector, toVector, upVector, totalSteps, rotator) {
     // do not add tween if there is already a tween for this vector
         if(this.tweenKeys[key]) {
             return false;
@@ -25,12 +26,16 @@ export default class ParabolicFootTweener {
             count: 0,
             totalSteps: totalSteps,
             key: key,
+            rotator: rotator,
         });
         return true;
     }
 
     update() {
         this.tweens.forEach((tweener, index, object) => {
+            if(tweener.rotator){
+              this.mover.updateHeroRotation()
+            }
             tweener.fromVector.add(tweener.dirVector);
             let x = (tweener.count - 0.5 * tweener.totalSteps) / (0.5 * tweener.totalSteps);
             let parabolicIdx = 1.5 * x * x;
@@ -38,7 +43,7 @@ export default class ParabolicFootTweener {
                 parabolicIdx = parabolicIdx * -1;
             }
 
-            this.helperVec.copy(tweener.upVector).multiplyScalar(0.45*parabolicIdx * tweener.step);
+            this.helperVec.copy(tweener.upVector).multiplyScalar(0.25*parabolicIdx * tweener.step);
             tweener.fromVector.add(this.helperVec);
 
             tweener.count = tweener.count + 1;

@@ -1,4 +1,4 @@
-import { Vector3, Matrix4 } from 'three';
+import { Vector3, Matrix4, Quaternion, Plane } from 'three';
 
 /**
  * A collection of utilities.
@@ -9,6 +9,7 @@ const t1 = new Vector3();
 const t2 = new Vector3();
 const t3 = new Vector3();
 const m1 = new Matrix4();
+const X_AXIS = new Vector3(1,0,0);
 
 /**
  * Returns the world position of object and sets
@@ -52,16 +53,6 @@ export function getCentroid(positions, target) {
   return target;
 };
 
-/**
- * Takes a direction vector and an up vector and sets
- * `target` quaternion to the rotation. Similar to THREE.Matrix4's
- * `lookAt` function, except rather than taking two Vector3 points,
- * we've already calculaeld the direction earlier so skip the first half.
- *
- * @param {THREE.Vector3} direction
- * @param {THREE.Vector3} up
- * @param {THREE.Quaternion} target
- */
 export function setQuaternionFromDirection(direction, up, target) {
   const x = t1;
   const y = t2;
@@ -91,6 +82,51 @@ export function setQuaternionFromDirection(direction, up, target) {
   el[ 2 ] = x.z; el[ 6 ] = y.z; el[ 10 ] = z.z;
 
   target.setFromRotationMatrix(m);
+}
+
+/**
+ * Takes a direction vector and an up vector and sets
+ * `target` quaternion to the rotation. Similar to THREE.Matrix4's
+ * `lookAt` function, except rather than taking two Vector3 points,
+ * we've already calculaeld the direction earlier so skip the first half.
+ *
+ * @param {THREE.Vector3} direction
+ * @param {THREE.Vector3} up
+ * @param {THREE.Quaternion} target
+ */
+
+
+const t = new Vector3();
+const q = new Quaternion()
+const p = new Plane()
+
+export function getAlignmentQuaternion(fromDir, toDir) {
+ var adjustAxis = t.crossVectors(fromDir, toDir).normalize()
+ var adjustAngle = fromDir.angleTo(toDir)
+
+ if(adjustAngle > 0.01 && adjustAngle < 1){
+   var adjustQuat = q.setFromAxisAngle(adjustAxis, adjustAngle);
+   return adjustQuat;
+ }
+ return null;
+}
+
+export function getAlignmentQuaternionOnPlane(toVector, fromVector, normal){
+ p.normal = normal;
+ var projectedVec = p.projectPoint(toVector, new Vector3()).normalize()
+ var quat = getAlignmentQuaternion(fromVector, projectedVec)
+ return quat;
+}
+
+
+export function setFixedQuaternionFromDirection(direction, up, target) {
+  var xAxis = new Vector3(1,0,0).applyQuaternion(target)
+  var dirOld = new Vector3(0,0,-1).applyQuaternion(target)
+  var forwardAdjustQuat = getAlignmentQuaternionOnPlane(direction, dirOld, xAxis)
+  if(forwardAdjustQuat){
+    target.premultiply(forwardAdjustQuat)
+  }
+  return;
 }
 
 /**
