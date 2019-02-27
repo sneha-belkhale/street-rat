@@ -6466,6 +6466,10 @@ three-fbx-loader@^1.0.3:
     pako "^1.0.6"
     three "^0.89.0"
 
+three-gltf-loader@^1.101.0:
+  version "1.101.0"
+  resolved "https://registry.yarnpkg.com/three-gltf-loader/-/three-gltf-loader-1.101.0.tgz#f6faf959e883101940052aa6930722152977f4f7"
+
 three-ik@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/three-ik/-/three-ik-0.1.0.tgz#a3ca9798c0f101bba9b418dc2e6ae9e5c990208a"

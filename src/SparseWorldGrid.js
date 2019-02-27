@@ -32,10 +32,15 @@ export default class SparseWorldGrid {
                 for(let k = -1; k < 2; k++) {
                     let value = this.valueAtWorldPos(posX + i * 20, posY + j * 20, posZ + k * 20);
                     if (value) {
-                        if(!meshes[value.id]) {
-                            meshesArray.push(value);
-                            meshes[value.id] = value;
+                      Object.keys(value).forEach(key => {
+                          var mesh = value[key];
+                          if(!meshes[mesh.id]) {
+                              meshesArray.push(mesh);
+                              meshes[mesh.id] = mesh;
+                          }
                         }
+                      );
+
                     }
                 }
             }
@@ -43,24 +48,29 @@ export default class SparseWorldGrid {
         return meshesArray;
     }
 
+    addForIdx(idx, mesh) {
+      if (!this.grid[idx]){
+        this.grid[idx] = {}
+      }
+      this.grid[idx][mesh.id] = mesh;
+    }
+
     fillGridFromBoundingBox(mesh, scene) {
         mesh.geometry.computeBoundingBox();
         let bbox = mesh.geometry.boundingBox;
-
         let minX = Math.floor((mesh.position.x + bbox.min.x) / 20);
         let maxX = Math.ceil((mesh.position.x + bbox.max.x) / 20);
         let minZ = Math.floor((mesh.position.z + bbox.min.z) / 20);
         let maxZ = Math.ceil((mesh.position.z + bbox.max.z) / 20);
         let minY = Math.floor((mesh.position.y + bbox.min.y) / 20);
         let maxY = Math.ceil((mesh.position.y + bbox.max.y) / 20);
-
         // top bottom
         for (var i = minX; i <= maxX; i++) {
             for (var j = minZ; j <= maxZ; j++) {
                 let idx = this.getHashRaw(i, minY, j);
-                this.grid[idx] = mesh;
+                this.addForIdx(idx, mesh)
                 let idx2 = this.getHashRaw(i, maxY, j);
-                this.grid[idx2] = mesh;
+                this.addForIdx(idx2, mesh)
             }
         }
 
@@ -68,9 +78,9 @@ export default class SparseWorldGrid {
         for (var i = minX; i <= maxX; i++) {
             for (var j = minY; j <= maxY; j++) {
                 let idx = this.getHashRaw(i, j, minZ);
-                this.grid[idx] = mesh;
+                this.addForIdx(idx, mesh)
                 let idx2 = this.getHashRaw(i, j, maxZ);
-                this.grid[idx2] = mesh;
+                this.addForIdx(idx2, mesh)
             }
         }
 
@@ -78,9 +88,9 @@ export default class SparseWorldGrid {
         for (var i = minY; i <= maxY; i++) {
             for (var j = minZ; j <= maxZ; j++) {
                 let idx = this.getHashRaw(minX, i, j);
-                this.grid[idx] = mesh;
+                this.addForIdx(idx, mesh)
                 let idx2 = this.getHashRaw(maxX, i, j);
-                this.grid[idx2] = mesh;
+                this.addForIdx(idx2, mesh)
             }
         }
     }

@@ -43,7 +43,7 @@ export default class ParabolicFootTweener {
                 parabolicIdx = parabolicIdx * -1;
             }
 
-            this.helperVec.copy(tweener.upVector).multiplyScalar(0.25*parabolicIdx * tweener.step);
+            this.helperVec.copy(tweener.upVector).multiplyScalar(0.45*parabolicIdx * tweener.step);
             tweener.fromVector.add(this.helperVec);
 
             tweener.count = tweener.count + 1;

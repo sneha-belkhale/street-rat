@@ -6,6 +6,7 @@ import EnvMapController from './EnvMapController';
 import { IK, IKChain, IKJoint, IKBallConstraint, IKHelper } from './three-ik/src';
 import FBXLoader from './FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
+import GLTFLoader from 'three-gltf-loader';
 
 import initRect from './rectAreaLights';
 initRect();
@@ -28,7 +29,8 @@ function promisifyLoader(loader, onProgress) {
 let scene, camera, renderer, controls;
 let stats, envMapController, heroMover;
 let cubeCamera, groundFloor;
-let worldGrid, backHip, tailPoint;
+let worldGrid, backHip, tailPoint, bonePoints, vent;
+var mouse = new THREE.Vector2()
 export default function initWebScene() {
   /** BASIC THREE SETUP **/
     scene = new THREE.Scene();
@@ -42,7 +44,7 @@ export default function initWebScene() {
     renderer.antialias = true;
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    // window.addEventListener('keydown', moveHero)
+    document.addEventListener( 'mousemove', onDocumentMouseMove, false );
     // set up stats
     stats = new Stats();
     stats.showPanel(0);
@@ -130,11 +132,12 @@ export default function initWebScene() {
     scene.add(glowTorusMain);
     glowTorusMain.position.copy(neonPos);
 
-    let roomWall = new THREE.Mesh(new THREE.BoxGeometry(200, 100, 100), new THREE.MeshPhysicalMaterial({
+    let roomWall = new THREE.Mesh(new THREE.BoxGeometry(200, 100, 400), new THREE.MeshPhysicalMaterial({
         side: THREE.BackSide,
         map: loader.load(require('./assets/checkerboard.png'))
     }));
     roomWall.geometry.computeFaceNormals();
+    roomWall.position.set(0,50,0)
     scene.add(roomWall);
 
     let hemisphere = new THREE.Mesh(new THREE.SphereGeometry(40), new THREE.MeshPhysicalMaterial({
@@ -143,26 +146,32 @@ export default function initWebScene() {
     hemisphere.position.set(80, -80, 0);
     scene.add(hemisphere);
 
-    const objLoader = promisifyLoader(new THREE.OBJLoader());
+    const gltfLoader = promisifyLoader(new GLTFLoader());
+    let gltf = gltfLoader.load('scene/scene.gltf').then((asset) => {
+      // scene.add(asset.scene)
+      var group = asset.scene.children[0];
+      console.log(group)
+      // add vent pipe
+      var c = group.children[0]
+      c.updateMatrixWorld()
+      var collisionMesh = c.children[0]
+      var mesh = c.children[1]
+      scene.add( mesh );
+      scene.add(collisionMesh)
+      worldGrid.fillGridFromBoundingBox(collisionMesh, scene);
 
-    let pipes = objLoader.load(require('./assets/pipe-01.obj')).then((asset) => {
-        let mesh = asset.children[0];
-        mesh.scale.set(50, 50, 50);
-        scene.add(mesh);
-    });
+      // group.children.forEach((c) => {
+      //   c.updateMatrixWorld()
+      //   var collisionMesh = c.children[0]
+      //   collisionMesh.applyMatrix( c.matrixWorld );
+      //   var mesh = c.children[1]
+      //   mesh.applyMatrix( c.matrixWorld );
+      //   scene.add( mesh );
+      //   scene.add(collisionMesh)
+      //   worldGrid.fillGridFromBoundingBox(collisionMesh, scene);
+      // });
+    }, console.log, console.log);
 
-    let buildings = objLoader.load(require('./assets/building-01.obj')).then((asset) => {
-        let mesh = asset.children[0];
-        mesh.material = new THREE.MeshPhysicalMaterial()
-        // scene.add(mesh);
-    });
-
-    let rat = objLoader.load(require('./assets/rat-01.obj')).then((asset) => {
-        let mesh = asset.children[0];
-        mesh.scale.set(10,10,10)
-        mesh.material = new THREE.MeshPhysicalMaterial()
-        scene.add(mesh);
-    });
 
     /** LOADING HERO MESH. SOMEONE HELP HERE THIS IS A MESS
 
@@ -176,33 +185,33 @@ export default function initWebScene() {
     let ratPromise = fbxLoader.load(require('./assets/rat-03.fbx')).then((ratMesh) => {
         scene.add(ratMesh);
         let hero = ratMesh;
+        hero.position.set(-30,0,0)
         hero.scale.set(1, 1, 1);
-        hero.position.set(0, -48, 0);
-        let bonePoints = [];
+        bonePoints = [];
         let boneGeo = new THREE.BoxGeometry(1, 1, 1);
         let boneMat = new THREE.MeshPhysicalMaterial({ color:'0xff00ff', wireframe: true });
         let numFeet = 2;
         //backfeet
         for(let i = 0; i < numFeet; i++) {
             let mesh = new THREE.Mesh(boneGeo, boneMat);
-            mesh.position.set(3 * (2 * i - 1), -49, 2);
+            mesh.position.set(3 * (2 * i - 1), 0, 2);
             bonePoints.push(mesh);
             scene.add(mesh);
         }
         //front feet
         for(let i = 0; i < numFeet; i++) {
             let mesh = new THREE.Mesh(boneGeo, boneMat);
-            mesh.position.set(3 * (2 * i - 1), -49, -10);
+            mesh.position.set(3 * (2 * i - 1), 0, -10);
             bonePoints.push(mesh);
             scene.add(mesh);
         }
         let headPoint = new THREE.Mesh(boneGeo, boneMat);
-        headPoint.position.set(0, -43, -12);
+        headPoint.position.set(0, 7, -12);
         bonePoints.push(headPoint);
         scene.add(headPoint)
 
         tailPoint = new THREE.Mesh(boneGeo, boneMat);
-        tailPoint.position.set(-1, -47, 11);
+        tailPoint.position.set(-1, 2, 11);
         bonePoints.push(tailPoint);
         scene.add(tailPoint)
 
@@ -212,7 +221,7 @@ export default function initWebScene() {
         rat.material = new THREE.MeshPhysicalMaterial({
             skinning: true,
             color: new THREE.Color('#0ff0ff'),
-            // opacity: 0.4,
+            opacity: 0.01,
             transparent: true,
         });
 
@@ -281,25 +290,7 @@ export default function initWebScene() {
         //ad ik for the spine
         // boneGroup = ratMesh.children[1].children[3]
         backHip = ratMesh.children[1].children[3]
-        // let ik = new IK();
-        // const chain = new IKChain();
-        // let currentBone = boneGroup.children[0];
-        // for (let i = 0; i < 5; i++) {
-        //     if(i==1){
-        //       currentBone = currentBone.children[2];
-        //     } else {
-        //       currentBone = currentBone.children[0];
-        //     }
-        //     console.log(currentBone)
-        //     let constraints = [ new IKBallConstraint(180) ];
-        //     // The last IKJoint must be added with a `target` as an end effector.
-        //     const target = i === 4 ? null: null;
-        //     chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
-        // }
-        // ik.add(chain);
-        // iks.push(ik);
-        // let helper2 = new IKHelper(ik);
-        // scene.add(helper2);
+        // addIKForSpine(backHip, iks)
 
         // ad ik for the tail
         var currentBone = ratMesh.children[1].children[0]
@@ -322,7 +313,7 @@ export default function initWebScene() {
     });
 
     // start the render loop once all objs/fbx things are done loading
-    Promise.all([ pipes, ratPromise ]).then(() => {
+    Promise.all([ gltf, ratPromise ]).then(() => {
         update();
     });
 
@@ -332,6 +323,33 @@ export default function initWebScene() {
     worldGrid = new SparseWorldGrid();
     worldGrid.fillGridFromBoundingBox(roomWall, scene);
     worldGrid.fillGridFromBoundingBox(hemisphere, scene);
+}
+
+function addIKForSpine(boneGroup, iks) {
+  let ik = new IK();
+  const chain = new IKChain();
+  let currentBone = boneGroup.children[0];
+  for (let i = 0; i < 5; i++) {
+      if(i==1){
+        currentBone = currentBone.children[2];
+      } else {
+        currentBone = currentBone.children[0];
+      }
+      let constraints = [ new IKBallConstraint(180) ];
+      // The last IKJoint must be added with a `target` as an end effector.
+      const target = i === 4 ? bonePoints[4]: null;
+      chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
+  }
+  ik.add(chain);
+  iks.push(ik);
+  let helper2 = new IKHelper(ik);
+  scene.add(helper2);
+}
+
+function onDocumentMouseMove( event ) {
+      event.preventDefault();
+      mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+      mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 }
 
 function update() {
