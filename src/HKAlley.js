@@ -35,7 +35,7 @@ export default function initWebScene() {
   /** BASIC THREE SETUP **/
     scene = new THREE.Scene();
     // set up camera
-    camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 100000);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 35, 100000);
     scene.add(camera);
     // set up controls
     controls = new OrbitControls(camera);
@@ -132,13 +132,21 @@ export default function initWebScene() {
     scene.add(glowTorusMain);
     glowTorusMain.position.copy(neonPos);
 
-    let roomWall = new THREE.Mesh(new THREE.BoxGeometry(200, 100, 400), new THREE.MeshPhysicalMaterial({
-        side: THREE.BackSide,
+    let roomWall = new THREE.Mesh(new THREE.BoxGeometry(200, 30, 400), new THREE.MeshPhysicalMaterial({
+        side: THREE.DoubleSide,
         map: loader.load(require('./assets/checkerboard.png'))
     }));
     roomWall.geometry.computeFaceNormals();
-    roomWall.position.set(0,50,0)
+    roomWall.position.set(0,-21,0)
     scene.add(roomWall);
+
+    let box = new THREE.Mesh(new THREE.BoxGeometry(30, 30, 30), new THREE.MeshBasicMaterial({
+        side: THREE.DoubleSide,
+        map: loader.load(require('./assets/checkerboard.png'))
+    }));
+    box.geometry.computeFaceNormals();
+    box.position.set(-40,10,-50)
+    scene.add(box);
 
     let hemisphere = new THREE.Mesh(new THREE.SphereGeometry(40), new THREE.MeshPhysicalMaterial({
     }));
@@ -150,8 +158,8 @@ export default function initWebScene() {
     let gltf = gltfLoader.load('scene/scene.gltf').then((asset) => {
       // scene.add(asset.scene)
       var group = asset.scene.children[0];
-      console.log(group)
-      // add vent pipe
+      // console.log(group)
+      // // add vent pipe
       var c = group.children[0]
       c.updateMatrixWorld()
       var collisionMesh = c.children[0]
@@ -189,7 +197,7 @@ export default function initWebScene() {
         hero.scale.set(1, 1, 1);
         bonePoints = [];
         let boneGeo = new THREE.BoxGeometry(1, 1, 1);
-        let boneMat = new THREE.MeshPhysicalMaterial({ color:'0xff00ff', wireframe: true });
+        let boneMat = new THREE.MeshBasicMaterial({ color:'0xff00ff', depthWrite: true });
         let numFeet = 2;
         //backfeet
         for(let i = 0; i < numFeet; i++) {
@@ -221,7 +229,7 @@ export default function initWebScene() {
         rat.material = new THREE.MeshPhysicalMaterial({
             skinning: true,
             color: new THREE.Color('#0ff0ff'),
-            opacity: 0.01,
+            // opacity: 0.01,
             transparent: true,
         });
 
@@ -235,80 +243,27 @@ export default function initWebScene() {
         scene.add(helper);
         console.log(boneGroup)
 
-        // rat
-        // make a chain connecting the legs
         let iks = [];
         //backfeet
         for (let j = 0; j < 2; j++) {
-            let ik = new IK();
-            const chain = new IKChain();
-            let currentBone = boneGroup.children[j+1];
-            for (let i = 0; i < 3; i++) {
-                currentBone = currentBone.children[0];
-                let constraints = [ new IKBallConstraint(180) ];
-                if(i == 2) {
-                    constraints = [ new IKBallConstraint(180) ];
-                }
-                if(i == 0) {
-                    constraints = null;
-                }
-                // The last IKJoint must be added with a `target` as an end effector.
-                const target = i === 2 ? bonePoints[j] : null;
-                chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
-            }
-            ik.add(chain);
-            iks.push(ik);
-
-            let helper2 = new IKHelper(ik);
-            scene.add(helper2);
+          addIKForGroup(boneGroup.children[j+1], iks, 3, bonePoints[j])
         }
+
         boneGroup = ratMesh.children[1].children[3].children[0].children[0]
         //front feet
         for (let j = 0; j < 2; j++) {
-            let ik = new IK();
-            const chain = new IKChain();
-            let currentBone = boneGroup.children[j];
-            for (let i = 0; i < 3; i++) {
-                currentBone = currentBone.children[0];
-                let constraints = [ new IKBallConstraint(180) ];
-                if(i == 2) {
-                    constraints = [ new IKBallConstraint(10) ];
-                }
-                if(i == 0) {
-                    constraints = null;
-                }
-                // The last IKJoint must be added with a `target` as an end effector.
-                const target = i === 2 ? bonePoints[j+2] : null;
-                chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
-            }
-            ik.add(chain);
-            iks.push(ik);
-            let helper2 = new IKHelper(ik);
-            scene.add(helper2);
+          addIKForGroup(boneGroup.children[j], iks, 3, bonePoints[j+2])
         }
 
         //ad ik for the spine
-        // boneGroup = ratMesh.children[1].children[3]
         backHip = ratMesh.children[1].children[3]
-        // addIKForSpine(backHip, iks)
+        addIKForSpine(backHip, iks)
 
         // ad ik for the tail
-        var currentBone = ratMesh.children[1].children[0]
         var tail = ratMesh.children[1].children[0]
-        let ik = new IK();
-        const chain = new IKChain();
-        for (let i = 0; i < 7; i++) {
-            currentBone = currentBone.children[0];
-            console.log(currentBone)
-            let constraints = [ new IKBallConstraint(360, false) ];
-            // The last IKJoint must be added with a `target` as an end effector.
-            const target = i === 6 ? bonePoints[5]: null;
-            chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
-        }
-        ik.add(chain);
-        iks.push(ik);
-        let helper2 = new IKHelper(ik);
-        scene.add(helper2);
+        addIKForGroup(tail, iks, 7, bonePoints[5])
+
+
         heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
     });
 
@@ -323,6 +278,8 @@ export default function initWebScene() {
     worldGrid = new SparseWorldGrid();
     worldGrid.fillGridFromBoundingBox(roomWall, scene);
     worldGrid.fillGridFromBoundingBox(hemisphere, scene);
+    worldGrid.fillGridFromBoundingBox(box, scene);
+
 }
 
 function addIKForSpine(boneGroup, iks) {
@@ -342,10 +299,27 @@ function addIKForSpine(boneGroup, iks) {
   }
   ik.add(chain);
   iks.push(ik);
-  let helper2 = new IKHelper(ik);
-  scene.add(helper2);
+  let helper = new IKHelper(ik);
+  scene.add(helper);
 }
 
+function addIKForGroup (boneGroup, iks, length, boneTarget) {
+  let ik = new IK();
+  const chain = new IKChain();
+  var currentBone = boneGroup
+  for (let i = 0; i < length; i++) {
+      currentBone = currentBone.children[0];
+      console.log(currentBone)
+      let constraints = [ new IKBallConstraint(360, false) ];
+      // The last IKJoint must be added with a `target` as an end effector.
+      const target = i === (length-1) ? boneTarget: null;
+      chain.add(new IKJoint(currentBone, { constraints: constraints }), { target: target });
+  }
+  ik.add(chain);
+  iks.push(ik);
+  let helper = new IKHelper(ik);
+  scene.add(helper);
+}
 function onDocumentMouseMove( event ) {
       event.preventDefault();
       mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;

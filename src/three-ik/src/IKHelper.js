@@ -31,7 +31,7 @@ class BoneHelper extends Object3D {
     }
 
     // Offset the bone so that its rotation point is at the base of the bone
-    this.boneMesh.position.z = -height / 2;
+    this.boneMesh.position.z = height / 2;
     this.add(this.boneMesh);
 
     this.axesHelper = new AxesHelper(axesSize);

@@ -42,7 +42,6 @@ class IKBallConstraint {
       // Find the correction axis and rotate around that point to the
       // largest allowed angle
       const correctionAxis = new Vector3().crossVectors(parentDirection, direction).normalize();
-
       parentDirection.applyAxisAngle(correctionAxis, this.angle * DEG2RAD * 0.5);
       joint._setDirection(parentDirection);
     }
@@ -51,13 +50,13 @@ class IKBallConstraint {
 
     //project direction on the rotation plane. right now i'm assuming that there is always
     //a rotation plane and it is the local x axis.. TODO: to make this configurable
-    if(this.axisAligned){
-      const rotationPlaneNormal = joint._localToWorldDirection(new Vector3().copy(X_AXIS)).normalize();
-      this.rotationPlane.normal = rotationPlaneNormal
-
-      this.rotationPlane.projectPoint(direction, parentDirection)
-      joint._setDirection(parentDirection);
-    }
+    // if(this.axisAligned){
+    //   const rotationPlaneNormal = joint._localToWorldDirection(new Vector3().copy(X_AXIS)).normalize();
+    //   this.rotationPlane.normal = rotationPlaneNormal
+    //
+    //   this.rotationPlane.projectPoint(direction, parentDirection)
+    //   joint._setDirection(parentDirection);
+    // }
     return false;
   }
 }

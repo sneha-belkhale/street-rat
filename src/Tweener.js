@@ -33,9 +33,6 @@ export default class ParabolicFootTweener {
 
     update() {
         this.tweens.forEach((tweener, index, object) => {
-            if(tweener.rotator){
-              this.mover.updateHeroRotation()
-            }
             tweener.fromVector.add(tweener.dirVector);
             let x = (tweener.count - 0.5 * tweener.totalSteps) / (0.5 * tweener.totalSteps);
             let parabolicIdx = 1.5 * x * x;
