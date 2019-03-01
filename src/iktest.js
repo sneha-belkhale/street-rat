@@ -1,13 +1,13 @@
 import Stats from 'stats-js';
-import GlowShader from './GlowShader';
-import ParallaxCorrectPhysicalMaterial from './ParallaxCorrectPhysicalMaterial';
+import GlowShader from './shaders/GlowShader';
+import ParallaxCorrectPhysicalMaterial from './shaders/ParallaxCorrectPhysicalMaterial';
 import WorldGrid from './WorldGrid';
 import HeroMoverNN from './HeroMoverNN';
 import EnvMapController from './EnvMapController';
 import { IK, IKChain, IKJoint, IKBallConstraint, IKHelper } from './three-ik/src';
-import FBXLoader from './FBXLoader';
+import FBXLoader from './libs/FBXLoader';
 
-import initRect from './rectAreaLights';
+import initRect from './libs/rectAreaLights';
 initRect();
 let THREE = require('three');
 let OBJLoader = require('three-obj-loader')(THREE);

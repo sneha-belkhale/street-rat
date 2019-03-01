@@ -1,0 +1,8 @@
+node_modules/
+public/
+src/assets/
+src/three-ik/
+
+# 3rd party
+src/libs/
+src/shaders/

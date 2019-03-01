@@ -4,8 +4,6 @@
   "private": true,
   "homepage": "./",
   "dependencies": {
-    "lint": "^1.1.2",
-    "react-scripts": "1.1.4",
     "stats-js": "^1.0.0",
     "three": "^0.101.1",
     "three-fbx-loader": "^1.0.3",
@@ -20,6 +18,17 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "linter": "eslint --ignore-path .gitignore ."
-  }
+    "lint": "node_modules/.bin/eslint .",
+    "lint:fix": "node_modules/.bin/eslint . --fix"
+  },
+  "devDependencies": {
+    "eslint-config-airbnb": "^17.1.0",
+    "react-scripts": "^2.1.5"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
 }
