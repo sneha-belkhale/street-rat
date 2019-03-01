@@ -1,33 +1,22 @@
 import Stats from 'stats-js';
 import GLTFLoader from 'three-gltf-loader';
-import GlowShader from './GlowShader';
-import ParallaxCorrectPhysicalMaterial from './ParallaxCorrectPhysicalMaterial';
+import GlowShader from './shaders/GlowShader';
+import ParallaxCorrectPhysicalMaterial from './shaders/ParallaxCorrectPhysicalMaterial';
 import HeroMoverNN from './HeroMoverNN';
 import EnvMapController from './EnvMapController';
 import {
   IK, IKChain, IKJoint, IKBallConstraint, IKHelper,
 } from './three-ik/src';
-import FBXLoader from './FBXLoader';
+import FBXLoader from './libs/FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
+import { promisifyLoader } from './Utils';
 
-import initRect from './rectAreaLights';
+import initRect from './libs/rectAreaLights';
 
 initRect();
 const THREE = require('three');
 const OBJLoader = require('three-obj-loader')(THREE);
 const OrbitControls = require('three-orbit-controls')(THREE);
-
-function promisifyLoader(loader, onProgress) {
-  function promiseLoader(url) {
-    return new Promise((resolve, reject) => {
-      loader.load(url, resolve, onProgress, reject);
-    });
-  }
-  return {
-    originalLoader: loader,
-    load: promiseLoader,
-  };
-}
 
 let scene; let camera; let renderer; let
   controls;

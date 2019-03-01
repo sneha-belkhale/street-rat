@@ -1,5 +1,5 @@
 import initWebScene from './HKAlley';
-import initTestScene from './TestScene';
+import TestScene from './TestScene';
 
 const scene = process.env.REACT_APP_SCENE;
 
@@ -9,9 +9,11 @@ switch (scene) {
   case 'main':
     initWebScene();
     break;
-  case 'test':
-    initTestScene();
+  case 'test': {
+    const s = new TestScene();
+    s.render();
     break;
+  }
   default:
     initWebScene();
 }
