@@ -174,7 +174,7 @@ export default function initWebScene() {
             instancedMeshCollision.scale.copy(instancedMesh.scale)
             instancedMeshCollision.quaternion.copy(instancedMesh.quaternion)
             scene.add(instancedMeshCollision)
-            worldGrid.fillGridFromBoundingBox(instancedMeshCollision, scene, scale);
+            worldGrid.fillGridForMesh(instancedMeshCollision);
           }
         } else {
           collision.applyMatrix( c.matrixWorld );
@@ -182,7 +182,7 @@ export default function initWebScene() {
           mesh.applyMatrix( c.matrixWorld );
           scene.add( mesh );
           scene.add(collision)
-          worldGrid.fillGridFromBoundingBox(collision, scene, scale);
+          worldGrid.fillGridForMesh(collision);
         }
       });
     }, console.log, console.log);
@@ -276,7 +276,7 @@ export default function initWebScene() {
     envMapController = new EnvMapController([ groundFloor ], cubeCamera, renderer, scene);
 
     // initialize collision world grid and fill in the necessary meshes
-    worldGrid = new SparseWorldGrid();
+    worldGrid = new SparseWorldGrid(20);
 
 }
 

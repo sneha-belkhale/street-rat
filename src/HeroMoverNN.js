@@ -253,7 +253,7 @@ export default class HeroMover {
     var axis = new THREE.Vector3().crossVectors(forward, up)
     var raycastQuat = new THREE.Quaternion();
     var raycastDir = new THREE.Vector3();
-    var meshes = this.worldGrid.queryPointsInRadius(basePos.x, basePos.y, basePos.z)
+    var meshes = this.worldGrid.queryPointsInRadius(basePos.x, basePos.y, basePos.z, 1)
 
     meshes.forEach((mesh) => {
       mesh.material.side = THREE.DoubleSide

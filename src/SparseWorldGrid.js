@@ -3,14 +3,16 @@ let THREE = require('three');
 const DEBUG_MODE = false;
 
 export default class SparseWorldGrid {
-    constructor() {
+    constructor( cellSize ) {
         this.grid = {};
+        this.cellSize = cellSize;
+        this.helperBbox = new THREE.Box3()
     }
 
     getHash(posX, posY, posZ) {
-        return `${Math.round(posX / 20)}:${
-            Math.round(posY / 20)}:${
-            Math.round(posZ / 20)}`;
+        return `${Math.round(posX / this.cellSize)}:${
+            Math.round(posY / this.cellSize)}:${
+            Math.round(posZ / this.cellSize)}`;
     }
 
     getHashRaw(posX, posY, posZ) {
@@ -25,27 +27,25 @@ export default class SparseWorldGrid {
     }
 
     queryPointsInRadius(posX, posY, posZ, r) {
-        let meshes = {};
-        let meshesArray = [];
-        for(let i = -1; i < 2; i++) {
-            for(let j = -1; j < 2; j++) {
-                for(let k = -1; k < 2; k++) {
-                    let value = this.valueAtWorldPos(posX + i * 20, posY + j * 20, posZ + k * 20);
-                    if (value) {
-                      Object.keys(value).forEach(key => {
-                          var mesh = value[key];
-                          if(!meshes[mesh.id]) {
-                              meshesArray.push(mesh);
-                              meshes[mesh.id] = mesh;
-                          }
-                        }
-                      );
-
-                    }
+      let meshes = {};
+      let meshesArray = [];
+      for(let i = -r; i < r+1; i++) {
+        for(let j = -r; j < r+1; j++) {
+          for(let k = -r; k < r+1; k++) {
+            let value = this.valueAtWorldPos(posX + i * this.cellSize, posY + j * this.cellSize, posZ + k * this.cellSize);
+            if (value) {
+              Object.keys(value).forEach(key => {
+                var mesh = value[key];
+                if(!meshes[mesh.id]) {
+                    meshesArray.push(mesh);
+                    meshes[mesh.id] = mesh;
                 }
+              });
             }
+          }
         }
-        return meshesArray;
+      }
+      return meshesArray;
     }
 
     addForIdx(idx, mesh) {
@@ -55,15 +55,14 @@ export default class SparseWorldGrid {
       this.grid[idx][mesh.id] = mesh;
     }
 
-    fillGridFromBoundingBox(mesh, scene, scale) {
-        mesh.geometry.computeBoundingBox();
-        let bbox = mesh.geometry.boundingBox;
-        let minX = Math.floor((mesh.position.x + scale*bbox.min.x) / 20);
-        let maxX = Math.ceil((mesh.position.x + scale*bbox.max.x) / 20);
-        let minZ = Math.floor((mesh.position.z + scale*bbox.min.z) / 20);
-        let maxZ = Math.ceil((mesh.position.z + scale*bbox.max.z) / 20);
-        let minY = Math.floor((mesh.position.y + scale*bbox.min.y) / 20);
-        let maxY = Math.ceil((mesh.position.y + scale*bbox.max.y) / 20);
+    fillGridForMesh(mesh) {
+        var bbox = this.helperBbox.setFromObject(mesh)
+        let minX = Math.floor((bbox.min.x) / this.cellSize);
+        let maxX = Math.ceil((bbox.max.x) / this.cellSize);
+        let minZ = Math.floor((bbox.min.z) / this.cellSize);
+        let maxZ = Math.ceil((bbox.max.z) / this.cellSize);
+        let minY = Math.floor((bbox.min.y) / this.cellSize);
+        let maxY = Math.ceil((bbox.max.y) / this.cellSize);
         // top bottom
         for (var i = minX; i <= maxX; i++) {
             for (var j = minZ; j <= maxZ; j++) {
@@ -73,7 +72,6 @@ export default class SparseWorldGrid {
                 this.addForIdx(idx2, mesh)
             }
         }
-
         // left right
         for (var i = minX; i <= maxX; i++) {
             for (var j = minY; j <= maxY; j++) {
@@ -83,7 +81,6 @@ export default class SparseWorldGrid {
                 this.addForIdx(idx2, mesh)
             }
         }
-
         // forward backward
         for (var i = minY; i <= maxY; i++) {
             for (var j = minZ; j <= maxZ; j++) {
