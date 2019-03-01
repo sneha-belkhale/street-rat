@@ -203,7 +203,7 @@ export default class HeroMover {
       var tailPos = this.adjustPosForTail(this.incomingPos.clone(), curFootOffset, upNew)
       var tailTween = new TWEEN.Tween(tailBone.position).to(tailPos, 300).start();
       this.stagnantTale = true;
-      setTimeout(() => {this.stagnantTale = false}, 400/3)
+      setTimeout(() => {this.stagnantTale = false}, 300)
 
     }
   }
@@ -268,10 +268,10 @@ export default class HeroMover {
       this.raycaster.set(basePos, raycastDir)
       var n = this.raycaster.intersectObjects(meshes);
       if(n[0]){
-        console.log(n[0].point,n[0].point.distanceTo(basePos) )
-        console.log(n)
+        console.log(n[0].point,n[0].face.normal )
         if(n[0].point.distanceTo(basePos) < 15){
-          min = [n[0].point, n[0].face.normal.clone()]
+          var adjustedNormal = n[0].face.normal.clone().transformDirection( n[0].object.matrixWorld );
+          min = [n[0].point, adjustedNormal]
           found = true;
         }
       }

@@ -55,15 +55,15 @@ export default class SparseWorldGrid {
       this.grid[idx][mesh.id] = mesh;
     }
 
-    fillGridFromBoundingBox(mesh, scene) {
+    fillGridFromBoundingBox(mesh, scene, scale) {
         mesh.geometry.computeBoundingBox();
         let bbox = mesh.geometry.boundingBox;
-        let minX = Math.floor((mesh.position.x + bbox.min.x) / 20);
-        let maxX = Math.ceil((mesh.position.x + bbox.max.x) / 20);
-        let minZ = Math.floor((mesh.position.z + bbox.min.z) / 20);
-        let maxZ = Math.ceil((mesh.position.z + bbox.max.z) / 20);
-        let minY = Math.floor((mesh.position.y + bbox.min.y) / 20);
-        let maxY = Math.ceil((mesh.position.y + bbox.max.y) / 20);
+        let minX = Math.floor((mesh.position.x + scale*bbox.min.x) / 20);
+        let maxX = Math.ceil((mesh.position.x + scale*bbox.max.x) / 20);
+        let minZ = Math.floor((mesh.position.z + scale*bbox.min.z) / 20);
+        let maxZ = Math.ceil((mesh.position.z + scale*bbox.max.z) / 20);
+        let minY = Math.floor((mesh.position.y + scale*bbox.min.y) / 20);
+        let maxY = Math.ceil((mesh.position.y + scale*bbox.max.y) / 20);
         // top bottom
         for (var i = minX; i <= maxX; i++) {
             for (var j = minZ; j <= maxZ; j++) {

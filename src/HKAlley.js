@@ -35,7 +35,7 @@ export default function initWebScene() {
   /** BASIC THREE SETUP **/
     scene = new THREE.Scene();
     // set up camera
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 35, 100000);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 35, 100000);
     scene.add(camera);
     // set up controls
     controls = new OrbitControls(camera);
@@ -132,52 +132,59 @@ export default function initWebScene() {
     scene.add(glowTorusMain);
     glowTorusMain.position.copy(neonPos);
 
-    let roomWall = new THREE.Mesh(new THREE.BoxGeometry(200, 30, 400), new THREE.MeshPhysicalMaterial({
-        side: THREE.DoubleSide,
-        map: loader.load(require('./assets/checkerboard.png'))
-    }));
-    roomWall.geometry.computeFaceNormals();
-    roomWall.position.set(0,-21,0)
-    scene.add(roomWall);
-
-    let box = new THREE.Mesh(new THREE.BoxGeometry(30, 30, 30), new THREE.MeshBasicMaterial({
-        side: THREE.DoubleSide,
-        map: loader.load(require('./assets/checkerboard.png'))
-    }));
-    box.geometry.computeFaceNormals();
-    box.position.set(-40,10,-50)
-    scene.add(box);
-
-    let hemisphere = new THREE.Mesh(new THREE.SphereGeometry(40), new THREE.MeshPhysicalMaterial({
-    }));
-    hemisphere.geometry.computeFaceNormals();
-    hemisphere.position.set(80, -80, 0);
-    scene.add(hemisphere);
-
     const gltfLoader = promisifyLoader(new GLTFLoader());
     let gltf = gltfLoader.load('scene/scene.gltf').then((asset) => {
       // scene.add(asset.scene)
       var group = asset.scene.children[0];
-      // console.log(group)
-      // // add vent pipe
-      var c = group.children[0]
-      c.updateMatrixWorld()
-      var collisionMesh = c.children[0]
-      var mesh = c.children[1]
-      scene.add( mesh );
-      scene.add(collisionMesh)
-      worldGrid.fillGridFromBoundingBox(collisionMesh, scene);
+      var scale = 35;
+      asset.scene.scale.set(scale,scale,scale)
+      asset.scene.updateMatrixWorld()
+      group.children.forEach((c) => {
+        var collision, mesh, instance;
+        c.children.forEach((child) => {
+          switch(child.name) {
+            case "collision":
+              collision = child;
+            break;
+            case "mesh":
+              mesh = child;
+            break;
+            case "instances":
+              instance = child;
+            break;
+          }
+        })
+        if(instance){
+          var posArray = instance.geometry.attributes.position.array;
+          var scaleArray = instance.geometry.attributes.color.array;
+          var normalArray = instance.geometry.attributes.normal.array;
 
-      // group.children.forEach((c) => {
-      //   c.updateMatrixWorld()
-      //   var collisionMesh = c.children[0]
-      //   collisionMesh.applyMatrix( c.matrixWorld );
-      //   var mesh = c.children[1]
-      //   mesh.applyMatrix( c.matrixWorld );
-      //   scene.add( mesh );
-      //   scene.add(collisionMesh)
-      //   worldGrid.fillGridFromBoundingBox(collisionMesh, scene);
-      // });
+          for (var i = 0; i < instance.geometry.attributes.position.count; i+=3) {
+            var instancedMesh = new THREE.Mesh();
+            instancedMesh.geometry = mesh.geometry;
+            instancedMesh.material = mesh.material;
+            instancedMesh.position.set(scale*posArray[3*i], scale*posArray[3*i+1], scale*posArray[3*i+2])
+            instancedMesh.scale.set(scale*scaleArray[3*i], scale*scaleArray[3*i], scale*scaleArray[3*i])
+            instancedMesh.lookAt(new THREE.Vector3(instancedMesh.position.x + normalArray[3*i], instancedMesh.position.y + normalArray[3*i+1], instancedMesh.position.z +normalArray[3*i+2]))
+            scene.add(instancedMesh)
+            var instancedMeshCollision = new THREE.Mesh();
+            instancedMeshCollision.geometry = collision.geometry;
+            instancedMeshCollision.material.visible = false;
+            instancedMeshCollision.position.copy(instancedMesh.position)
+            instancedMeshCollision.scale.copy(instancedMesh.scale)
+            instancedMeshCollision.quaternion.copy(instancedMesh.quaternion)
+            scene.add(instancedMeshCollision)
+            worldGrid.fillGridFromBoundingBox(instancedMeshCollision, scene, scale);
+          }
+        } else {
+          collision.applyMatrix( c.matrixWorld );
+          // collision.material.visible = false;
+          mesh.applyMatrix( c.matrixWorld );
+          scene.add( mesh );
+          scene.add(collision)
+          worldGrid.fillGridFromBoundingBox(collision, scene, scale);
+        }
+      });
     }, console.log, console.log);
 
 
@@ -193,7 +200,7 @@ export default function initWebScene() {
     let ratPromise = fbxLoader.load(require('./assets/rat-03.fbx')).then((ratMesh) => {
         scene.add(ratMesh);
         let hero = ratMesh;
-        hero.position.set(-30,0,0)
+        hero.position.set(30,0,-30)
         hero.scale.set(1, 1, 1);
         bonePoints = [];
         let boneGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -241,29 +248,23 @@ export default function initWebScene() {
         let helper = new THREE.SkeletonHelper(boneGroup);
         helper.material.linewidth = 5;
         scene.add(helper);
-        console.log(boneGroup)
 
         let iks = [];
         //backfeet
         for (let j = 0; j < 2; j++) {
           addIKForGroup(boneGroup.children[j+1], iks, 3, bonePoints[j])
         }
-
-        boneGroup = ratMesh.children[1].children[3].children[0].children[0]
         //front feet
+        boneGroup = ratMesh.children[1].children[3].children[0].children[0]
         for (let j = 0; j < 2; j++) {
           addIKForGroup(boneGroup.children[j], iks, 3, bonePoints[j+2])
         }
-
         //ad ik for the spine
         backHip = ratMesh.children[1].children[3]
         addIKForSpine(backHip, iks)
-
         // ad ik for the tail
         var tail = ratMesh.children[1].children[0]
         addIKForGroup(tail, iks, 7, bonePoints[5])
-
-
         heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
     });
 
@@ -276,9 +277,6 @@ export default function initWebScene() {
 
     // initialize collision world grid and fill in the necessary meshes
     worldGrid = new SparseWorldGrid();
-    worldGrid.fillGridFromBoundingBox(roomWall, scene);
-    worldGrid.fillGridFromBoundingBox(hemisphere, scene);
-    worldGrid.fillGridFromBoundingBox(box, scene);
 
 }
 
@@ -309,7 +307,6 @@ function addIKForGroup (boneGroup, iks, length, boneTarget) {
   var currentBone = boneGroup
   for (let i = 0; i < length; i++) {
       currentBone = currentBone.children[0];
-      console.log(currentBone)
       let constraints = [ new IKBallConstraint(360, false) ];
       // The last IKJoint must be added with a `target` as an end effector.
       const target = i === (length-1) ? boneTarget: null;
