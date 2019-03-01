@@ -1,19 +1,20 @@
 import Stats from 'stats-js';
 import GLTFLoader from 'three-gltf-loader';
-import GlowShader from './shaders/GlowShader';
-import ParallaxCorrectPhysicalMaterial from './shaders/ParallaxCorrectPhysicalMaterial';
+import GlowShader from './GlowShader';
+import ParallaxCorrectPhysicalMaterial from './ParallaxCorrectPhysicalMaterial';
 import HeroMoverNN from './HeroMoverNN';
 import EnvMapController from './EnvMapController';
 import {
   IK, IKChain, IKJoint, IKBallConstraint, IKHelper,
 } from './three-ik/src';
-import FBXLoader from './libs/FBXLoader';
+import FBXLoader from './FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
 
-import initRect from './libs/rectAreaLights';
+import initRect from './rectAreaLights';
 
 initRect();
 const THREE = require('three');
+const OBJLoader = require('three-obj-loader')(THREE);
 const OrbitControls = require('three-orbit-controls')(THREE);
 
 function promisifyLoader(loader, onProgress) {
@@ -181,7 +182,7 @@ export default function initWebScene() {
           instancedMeshCollision.scale.copy(instancedMesh.scale);
           instancedMeshCollision.quaternion.copy(instancedMesh.quaternion);
           scene.add(instancedMeshCollision);
-          worldGrid.fillGridFromBoundingBox(instancedMeshCollision, scene, scale);
+          worldGrid.fillGridForMesh(instancedMeshCollision);
         }
       } else {
         collision.applyMatrix(c.matrixWorld);
@@ -189,7 +190,7 @@ export default function initWebScene() {
         mesh.applyMatrix(c.matrixWorld);
         scene.add(mesh);
         scene.add(collision);
-        worldGrid.fillGridFromBoundingBox(collision, scene, scale);
+        worldGrid.fillGridForMesh(collision);
       }
     });
   }, console.log, console.log);
@@ -283,7 +284,7 @@ export default function initWebScene() {
   envMapController = new EnvMapController([groundFloor], cubeCamera, renderer, scene);
 
   // initialize collision world grid and fill in the necessary meshes
-  worldGrid = new SparseWorldGrid();
+  worldGrid = new SparseWorldGrid(20);
 }
 
 function addIKForSpine(boneGroup, iks) {
