@@ -43,8 +43,8 @@ const ParallaxCorrectPhysicalMaterial = {
       vec3 parallaxCorrectNormal( vec3 v, vec3 cubeSize, vec3 cubePos ) {
 
         vec3 nDir = normalize(v);
-        vec3 rbmax = (   .5 * ( cubeSize - cubePos ) - vWorldPosition ) / nDir;
-        vec3 rbmin = ( - .5 * ( cubeSize - cubePos ) - vWorldPosition ) / nDir;
+        vec3 rbmax = (   .5 * ( cubeSize + cubePos ) + cubePos - vWorldPosition ) / nDir;
+        vec3 rbmin = ( - .5 * ( cubeSize - cubePos ) + cubePos - vWorldPosition ) / nDir;
 
         vec3 rbminmax;
         rbminmax.x = ( nDir.x > 0. )?rbmax.x:rbmin.x;

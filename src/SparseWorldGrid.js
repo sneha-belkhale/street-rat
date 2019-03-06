@@ -1,5 +1,27 @@
 const THREE = require('three');
 
+const DEBUG_MODE = false;
+
+class Line {
+    constructor(start, dir, length) {
+        this.start = start;
+        this.dir = dir.normalize();
+        this.length = length;
+    }
+
+    intersect(line) {
+        let nom = line.dir.dot(this.dir);
+        let s = (this.start.clone()
+            .sub(line.start)
+            .dot(line.dir) + line.start.clone()
+                .sub(this.start)
+                .dot(this.dir) * nom) / (1 - nom * nom);
+        let point = line.start.clone().add(line.dir.clone().multiplyScalar(s));
+
+        return point;
+    }
+}
+
 export default class SparseWorldGrid {
   constructor(cellSize) {
     this.grid = {};
@@ -22,6 +44,11 @@ export default class SparseWorldGrid {
   valueAtWorldPos(posX, posY, posZ) {
     const idx = this.getHash(posX, posY, posZ);
     return this.grid[idx];
+  }
+
+  setValueAtWorldPos(posX, posY, posZ, mesh) {
+    const idx = this.getHash(posX, posY, posZ);
+    this.addForIdx(idx, mesh);
   }
 
   queryPointsInRadius(posX, posY, posZ, r) {
@@ -51,6 +78,68 @@ export default class SparseWorldGrid {
       this.grid[idx] = {};
     }
     this.grid[idx][mesh.id] = mesh;
+  }
+
+  // call this after setting world matrix.
+  fillGridForBufferMesh(mesh, scene) {
+      if (DEBUG_MODE) {
+          var starsGeometry = new THREE.Geometry();
+      }
+      let pos = mesh.geometry.attributes.position.array;
+      let index = mesh.geometry.index.array;
+      for(let i = 0; i < mesh.geometry.index.count; i = i + 3) {
+          let vertexA = new THREE.Vector3(pos[3 * index[i]], pos[3 * index[i] + 1], pos[3 * index[i] + 2]).applyMatrix4(mesh.matrixWorld);
+          let vertexB = new THREE.Vector3(pos[3 * index[i+1]], pos[3 * index[i+1] + 1], pos[3 * index[i+1] + 2]).applyMatrix4(mesh.matrixWorld);
+          let vertexC = new THREE.Vector3(pos[3 * index[i+2]], pos[3 * index[i+2] + 1], pos[3 * index[i+2] + 2]).applyMatrix4(mesh.matrixWorld);
+          // fill all from A - B
+          let lineAB = vertexB.clone().sub(vertexA);
+          let lineCA = vertexA.clone().sub(vertexC);
+          let lineBC = vertexC.clone().sub(vertexB);
+
+          let lengthAB = lineAB.length();
+          let lengthCA = lineCA.length();
+          let lengthBC = lineBC.length();
+
+          let baseLine, sideLine1, sideLine2;
+
+          if (lengthAB > lengthCA && lengthAB > lengthBC) {
+              baseLine = new Line(vertexA, lineAB, lengthAB);
+              sideLine1 = new Line(vertexA, lineCA.multiplyScalar(-1), lengthCA);
+              sideLine2 = new Line(vertexC, lineBC, lengthBC);
+          } else if (lengthCA > lengthAB && lengthCA > lengthBC) {
+              baseLine = new Line(vertexC, lineCA, lengthCA);
+              sideLine1 = new Line(vertexC, lineBC.multiplyScalar(-1), lengthBC);
+              sideLine2 = new Line(vertexB, lineAB, lengthAB);
+          } else {
+              baseLine = new Line(vertexB, lineBC, lengthBC);
+              sideLine1 = new Line(vertexB, lineAB.multiplyScalar(-1), lengthAB);
+              sideLine2 = new Line(vertexA, lineCA, lengthCA);
+          }
+
+          for (let j = 0; j < sideLine1.length; j+=this.cellSize) {
+              let nextPoint = sideLine1.start.clone().add(sideLine1.dir.normalize().clone()
+                  .multiplyScalar(j));
+              let scanLine = new Line(nextPoint, baseLine.dir);
+              let intersectionPoint = scanLine.intersect(sideLine2);
+
+              // lenght is this intersection point - start point
+              let length = nextPoint.clone().sub(intersectionPoint)
+                  .length();
+              let stride = baseLine.dir.clone().multiplyScalar(this.cellSize)
+              for (let i = 0; i < length; i+=this.cellSize) {
+                  this.setValueAtWorldPos(nextPoint.x, nextPoint.y, nextPoint.z, mesh);
+                  if (DEBUG_MODE) {
+                      starsGeometry.vertices.push(nextPoint.clone());
+                  }
+                  nextPoint.add(stride);
+              }
+          }
+      }
+      if (DEBUG_MODE) {
+          let starsMaterial = new THREE.PointsMaterial({ color: 0x888888 });
+          let starField = new THREE.Points(starsGeometry, starsMaterial);
+          scene.add(starField);
+      }
   }
 
   fillGridForMesh(mesh) {

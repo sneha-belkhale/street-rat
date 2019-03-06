@@ -249,11 +249,10 @@ export default class HeroMover {
     const raycastQuat = new THREE.Quaternion();
     const raycastDir = new THREE.Vector3();
     const meshes = this.worldGrid.queryPointsInRadius(basePos.x, basePos.y, basePos.z, 1);
-
     meshes.forEach((mesh) => {
       mesh.material.side = THREE.DoubleSide;
     });
-    const angles = [-5 * Math.PI / 8, -5.5 * Math.PI / 8];
+    const angles = [-5 * Math.PI / 8, -5.5 * Math.PI / 8, -7 * Math.PI / 8];
     angles.forEach((i) => {
       if (found) {
         return;
@@ -263,7 +262,7 @@ export default class HeroMover {
       this.raycaster.set(basePos, raycastDir);
       const n = this.raycaster.intersectObjects(meshes);
       if (n[0]) {
-        console.log(n[0].point, n[0].face.normal);
+        // console.log(n[0].point, n[0].face.normal);
         if (n[0].point.distanceTo(basePos) < 15) {
           const adjustedNormal = n[0].face.normal.clone().transformDirection(n[0].object.matrixWorld);
           min = [n[0].point, adjustedNormal];

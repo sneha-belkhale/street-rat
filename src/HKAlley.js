@@ -3,12 +3,13 @@ import GLTFLoader from 'three-gltf-loader';
 import GlowShader from './shaders/GlowShader';
 import ParallaxCorrectPhysicalMaterial from './shaders/ParallaxCorrectPhysicalMaterial';
 import HeroMoverNN from './HeroMoverNN';
-import EnvMapController from './EnvMapController';
 import {
   IK, IKChain, IKJoint, IKBallConstraint, IKHelper,
 } from './three-ik/src';
 import FBXLoader from './libs/FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
+import MainScene from './MainScene';
+
 import { promisifyLoader } from './Utils';
 
 import initRect from './libs/rectAreaLights';
@@ -19,7 +20,7 @@ const OBJLoader = require('three-obj-loader')(THREE);
 const OrbitControls = require('three-orbit-controls')(THREE);
 
 let scene; let camera; let renderer; let
-  controls;
+  controls; let mainScene;
 let stats; let envMapController; let
   heroMover;
 let cubeCamera; let
@@ -46,144 +47,28 @@ export default function initWebScene() {
   stats.showPanel(0);
   document.body.appendChild(stats.dom);
 
-  /** LIGHTS * */
-  // var neonPos = new THREE.Vector3(10,10,-45)
-  const neonPos = new THREE.Vector3(10, 10, -45);
-
-  const rectLight = new THREE.RectAreaLight(0xff00ff, 800, 5, 5);
-  rectLight.position.copy(neonPos);
-  rectLight.lookAt(0, 0, -1);
-  scene.add(rectLight);
-
-  const pointLight = new THREE.PointLight();
-  pointLight.position.set(0, 50, 0);
-  scene.add(pointLight);
-
   /** SCENE ROOM SETUP * */
-  // Create cube camera
-  cubeCamera = new THREE.CubeCamera(1, 1000, 128);
-  cubeCamera.renderTarget.texture.generateMipmaps = true;
-  cubeCamera.renderTarget.texture.minFilter = THREE.LinearMipMapLinearFilter;
-  cubeCamera.renderTarget.texture.magFilter = THREE.LinearFilter;
-  cubeCamera.renderTarget.texture.mapping = THREE.CubeReflectionMapping;
-  scene.add(cubeCamera);
-
-  const physicalShader = THREE.ShaderLib.physical;
-
-  const uniforms = {
-    cubeMapSize: { type: 'v3', value: new THREE.Vector3(200, 200, 100) },
-    cubeMapPos: { type: 'v3', value: new THREE.Vector3(0, -50, 0) },
-  };
-  const chromeUniforms = THREE.UniformsUtils.merge([physicalShader.uniforms, uniforms]);
-
-  const chromeMaterial = new THREE.ShaderMaterial({
-    uniforms: chromeUniforms,
-    vertexShader: ParallaxCorrectPhysicalMaterial.vertexShader,
-    fragmentShader: ParallaxCorrectPhysicalMaterial.fragmentShader,
-    transparent: true,
-    lights: true,
-    defines: {
-      PARALLAX_CORRECT: '',
-    },
-  });
-
-  const loader = new THREE.TextureLoader();
-  const tex = loader.load(require('./assets/spec.jpg'));
-  chromeMaterial.uniforms.roughnessMap.value = tex;
-  chromeMaterial.uniforms.roughnessMap.value.needsUpdate = true;
-  chromeMaterial.uniforms.roughness.value = 1.0;
-  chromeMaterial.roughnessMap = tex;
-
-  groundFloor = new THREE.Mesh(new THREE.PlaneGeometry(200, 100), chromeMaterial);
-  chromeMaterial.uniforms.envMap.value = cubeCamera.renderTarget.texture;
-  chromeMaterial.uniforms.envMap.value.needsUpdate = true;
-  chromeMaterial.uniforms.flipEnvMap.value = true;
-
-  groundFloor.rotateX(-Math.PI / 2);
-
-  chromeMaterial.envMap = cubeCamera.renderTarget.texture;
-  chromeMaterial.envMap.needsUpdate = true;
-  groundFloor.position.set(0, -49, 0);
-  groundFloor.geometry.computeVertexNormals();
-  // scene.add(groundFloor);
-  cubeCamera.position.copy(groundFloor.position);
 
   // add something glow
-  const glowTorusGeo = new THREE.TorusGeometry(10, 0.5, 20, 60);
-  const glowMat = new THREE.ShaderMaterial({
-    uniforms: {},
-    vertexShader: GlowShader.vertexShader,
-    fragmentShader: GlowShader.fragmentShader,
-    transparent: true,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-  });
-  const glowTorus = new THREE.Mesh(glowTorusGeo, glowMat);
-  scene.add(glowTorus);
-  glowTorus.position.copy(neonPos);
-
-  const glowTorusMain = new THREE.Mesh(glowTorusGeo, new THREE.MeshPhysicalMaterial({
-    emissive: new THREE.Color('#ff00ff'),
-  }));
-  scene.add(glowTorusMain);
-  glowTorusMain.position.copy(neonPos);
-
-  const gltfLoader = promisifyLoader(new GLTFLoader());
-  const gltf = gltfLoader.load('scene/scene.gltf').then((asset) => {
-    // scene.add(asset.scene)
-    const group = asset.scene.children[0];
-    const scale = 35;
-    asset.scene.scale.set(scale, scale, scale);
-    asset.scene.updateMatrixWorld();
-    group.children.forEach((c) => {
-      let collision; let mesh; let
-        instance;
-      c.children.forEach((child) => {
-        switch (child.name) {
-          case 'collision':
-            collision = child;
-            break;
-          case 'mesh':
-            mesh = child;
-            break;
-          case 'instances':
-            instance = child;
-            break;
-        }
-      });
-      if (instance) {
-        const posArray = instance.geometry.attributes.position.array;
-        const scaleArray = instance.geometry.attributes.color.array;
-        const normalArray = instance.geometry.attributes.normal.array;
-
-        for (let i = 0; i < instance.geometry.attributes.position.count; i += 3) {
-          const instancedMesh = new THREE.Mesh();
-          instancedMesh.geometry = mesh.geometry;
-          instancedMesh.material = mesh.material;
-          instancedMesh.position.set(scale * posArray[3 * i], scale * posArray[3 * i + 1], scale * posArray[3 * i + 2]);
-          instancedMesh.scale.set(scale * scaleArray[3 * i], scale * scaleArray[3 * i], scale * scaleArray[3 * i]);
-          instancedMesh.lookAt(new THREE.Vector3(instancedMesh.position.x + normalArray[3 * i], instancedMesh.position.y + normalArray[3 * i + 1], instancedMesh.position.z + normalArray[3 * i + 2]));
-          scene.add(instancedMesh);
-          const instancedMeshCollision = new THREE.Mesh();
-          instancedMeshCollision.geometry = collision.geometry;
-          instancedMeshCollision.material.visible = false;
-          instancedMeshCollision.position.copy(instancedMesh.position);
-          instancedMeshCollision.scale.copy(instancedMesh.scale);
-          instancedMeshCollision.quaternion.copy(instancedMesh.quaternion);
-          scene.add(instancedMeshCollision);
-          worldGrid.fillGridForMesh(instancedMeshCollision);
-        }
-      } else {
-        collision.applyMatrix(c.matrixWorld);
-        // collision.material.visible = false;
-        mesh.applyMatrix(c.matrixWorld);
-        scene.add(mesh);
-        scene.add(collision);
-        worldGrid.fillGridForMesh(collision);
-      }
-    });
-  }, console.log, console.log);
-
+  // var neonPos = new THREE.Vector3(0,0,0)
+  // const glowTorusGeo = new THREE.TorusGeometry(10, 0.5, 20, 60);
+  // const glowMat = new THREE.ShaderMaterial({
+  //   uniforms: {},
+  //   vertexShader: GlowShader.vertexShader,
+  //   fragmentShader: GlowShader.fragmentShader,
+  //   transparent: true,
+  //   side: THREE.DoubleSide,
+  //   blending: THREE.AdditiveBlending,
+  // });
+  // const glowTorus = new THREE.Mesh(glowTorusGeo, glowMat);
+  // scene.add(glowTorus);
+  // glowTorus.position.copy(neonPos);
+  //
+  // const glowTorusMain = new THREE.Mesh(glowTorusGeo, new THREE.MeshPhysicalMaterial({
+  //   emissive: new THREE.Color('#ff00ff'),
+  // }));
+  // scene.add(glowTorusMain);
+  // glowTorusMain.position.copy(neonPos);
 
   /** LOADING HERO MESH. SOMEONE HELP HERE THIS IS A MESS
 
@@ -236,6 +121,8 @@ export default function initWebScene() {
       // opacity: 0.01,
       transparent: true,
     });
+    rat.castShadow = true;
+    rat.receiveShadow = true;
 
     let boneGroup = ratMesh.children[1];
     boneGroup.position.set(0, 0, 0);
@@ -266,14 +153,13 @@ export default function initWebScene() {
   });
 
   // start the render loop once all objs/fbx things are done loading
-  Promise.all([gltf, ratPromise]).then(() => {
+  Promise.all([ratPromise]).then(() => {
     update();
   });
 
-  envMapController = new EnvMapController([groundFloor], cubeCamera, renderer, scene);
-
   // initialize collision world grid and fill in the necessary meshes
   worldGrid = new SparseWorldGrid(20);
+  mainScene = new MainScene(scene, renderer, worldGrid);
 }
 
 function addIKForSpine(boneGroup, iks) {
@@ -323,12 +209,10 @@ function update() {
   backHip.position.y = 0.5 + 0.5 * Math.sin(Date.now() * 0.001);
   requestAnimationFrame(update);
   stats.begin();
-  envMapController.update();
+  mainScene.update();
   if (heroMover) {
     heroMover.update();
   }
-  // sorry about dis
-  groundFloor.material.uniforms.maxMipLevel.value = renderer.properties.get(groundFloor.material.envMap).__maxMipLevel;
   renderer.render(scene, camera);
   stats.end();
 }
