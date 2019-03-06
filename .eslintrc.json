@@ -6,6 +6,7 @@
     "jest": true
   },
   "rules": {
-    "jsx-a11y/click-events-have-key-events": 0
+    "jsx-a11y/click-events-have-key-events": 0,
+    "no-param-reassign": 0
   }
 }

@@ -1,3 +1,4 @@
+import Stats from 'stats-js';
 import GLTFLoader from 'three-gltf-loader';
 import { promisifyLoader } from './Utils';
 
@@ -8,6 +9,16 @@ const OrbitControls = require('three-orbit-controls')(THREE);
 export default class TestScene {
   constructor() {
     this.renderer = new THREE.WebGLRenderer();
+
+    this.renderer.physicallyCorrectLights = true;
+    this.renderer.gammaOutput = true;
+    this.renderer.gammaFactor = 2.2;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    this.renderer.toneMapping = THREE.ReinhardToneMapping;
+
+    // this.renderer.shadowMap.enabled = true;
+
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
@@ -25,19 +36,17 @@ export default class TestScene {
 
     controls.update();
 
+    this.stats = new Stats();
+    document.body.appendChild(this.stats.dom);
+
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
     const cube = new THREE.Mesh(geometry, material);
 
     this.scene.add(cube);
 
-    const pointLight = new THREE.PointLight(0xff0000, 1, 1000);
-    pointLight.position.set(100, 100, 100);
-    this.scene.add(pointLight);
-
-    const sphereSize = 5;
-    const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
-    this.scene.add(pointLightHelper);
+    // const light = new THREE.HemisphereLight(0x3e52b7, 0x8e3109, 0.1);
+    // this.scene.add(light);
 
     this.loadGLTFScene();
   }
@@ -48,37 +57,116 @@ export default class TestScene {
 
   animate = () => {
     requestAnimationFrame(this.animate);
+
+    this.stats.begin();
     this.renderer.render(this.scene, this.camera);
+    this.stats.end();
   };
 
   handleSceneLoad = (scene) => {
-    
-    console.log('[D] scene', scene)
-
     const group = scene.scene.children[0];
+
     const scale = 35;
     scene.scene.scale.set(scale, scale, scale);
     scene.scene.updateMatrixWorld();
+
     group.children.forEach((asset) => {
+      let mesh = null;
+      let instances = null;
+
       asset.children.forEach((child) => {
         switch (child.name) {
           case 'collision': {
             break;
           }
-          case 'mesh':
+
+          case 'mesh': {
+            mesh = child;
+
             child.applyMatrix(asset.matrixWorld);
+
+            child.castShadow = true;
+            child.receiveShadow = true;
+
             this.scene.add(child);
             break;
-          case 'instances':
+          }
+
+          case 'light': {
+            const { _color: color, _intensity: intensity } = child.geometry.attributes;
+
+            const lightColor = new THREE.Color(...color.array);
+            const lightIntensity = intensity.array[0] * 10000;
+            const lightDistance = 0.0;
+            const decay = 2;
+
+            const pointLight = new THREE.PointLight(
+              lightColor, lightIntensity, lightDistance, decay,
+            );
+
+            const { x, y, z } = asset.position;
+            pointLight.position.set(x * scale, y * scale, z * scale);
+            pointLight.castShadow = true;
+
+            this.scene.add(pointLight);
+
+            const sphereSize = 8;
+            const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
+            this.scene.add(pointLightHelper);
+
             break;
+          }
+
+          case 'instances': {
+            instances = child;
+            break;
+          }
           default:
         }
       });
+
+      if (instances && mesh) {
+        const { position, color, normal } = instances.geometry.attributes;
+
+        const posArray = position.array;
+        const scaleArray = color.array;
+        const normalArray = normal.array;
+
+        for (let i = 0; i < position.count; i += 3) {
+          const iMesh = new THREE.Mesh();
+
+          iMesh.geometry = mesh.geometry;
+          iMesh.material = mesh.material;
+
+          iMesh.position.set(
+            scale * posArray[3 * i],
+            scale * posArray[3 * i + 1],
+            scale * posArray[3 * i + 2],
+          );
+          iMesh.scale.set(
+            scale * scaleArray[3 * i],
+            scale * scaleArray[3 * i],
+            scale * scaleArray[3 * i],
+          );
+
+          // TODO: Refactor to slightly more readable form
+          iMesh.lookAt(
+            new THREE.Vector3(
+              iMesh.position.x + normalArray[3 * i],
+              iMesh.position.y + normalArray[3 * i + 1],
+              iMesh.position.z + normalArray[3 * i + 2],
+            ),
+          );
+
+          iMesh.castShadow = true;
+
+          this.scene.add(iMesh);
+        }
+      }
     });
   }
 
-  handleLoadProgress = (progress) => {
-    console.log('[D] progress', progress);
+  handleLoadProgress = () => {
   }
 
   loadGLTFScene = () => {
