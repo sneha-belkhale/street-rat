@@ -1,7 +1,5 @@
 import Stats from 'stats-js';
-import GLTFLoader from 'three-gltf-loader';
-import GlowShader from './shaders/GlowShader';
-import ParallaxCorrectPhysicalMaterial from './shaders/ParallaxCorrectPhysicalMaterial';
+// import GlowShader from './shaders/GlowShader';
 import HeroMoverNN from './HeroMoverNN';
 import {
   IK, IKChain, IKJoint, IKBallConstraint, IKHelper,
@@ -16,17 +14,12 @@ import initRect from './libs/rectAreaLights';
 
 initRect();
 const THREE = require('three');
-const OBJLoader = require('three-obj-loader')(THREE);
-const OrbitControls = require('three-orbit-controls')(THREE);
+// const OrbitControls = require('three-orbit-controls')(THREE);
 
-let scene; let camera; let renderer; let
-  controls; let mainScene;
-let stats; let envMapController; let
+let scene; let camera; let renderer; let mainScene;
+let stats; let
   heroMover;
-let cubeCamera; let
-  groundFloor;
-let worldGrid; let backHip; let tailPoint; let bonePoints; let
-  vent;
+let worldGrid; let backHip; let tailPoint; let bonePoints;
 const mouse = new THREE.Vector2();
 export default function initWebScene() {
   /** BASIC THREE SETUP * */
@@ -35,7 +28,7 @@ export default function initWebScene() {
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 25, 100000);
   scene.add(camera);
   // set up controls
-  controls = new OrbitControls(camera);
+  // const controls = new OrbitControls(camera);
   // restrict movement to stay within the room
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.antialias = true;
@@ -89,14 +82,14 @@ export default function initWebScene() {
     const boneMat = new THREE.MeshBasicMaterial({ color: '0xff00ff', wireframe: true });
     const numFeet = 2;
     // backfeet
-    for (let i = 0; i < numFeet; i++) {
+    for (let i = 0; i < numFeet; i += 1) {
       const mesh = new THREE.Mesh(boneGeo, boneMat);
       mesh.position.set(3 * (2 * i - 1), 0, 2);
       bonePoints.push(mesh);
       scene.add(mesh);
     }
     // front feet
-    for (let i = 0; i < numFeet; i++) {
+    for (let i = 0; i < numFeet; i += 1) {
       const mesh = new THREE.Mesh(boneGeo, boneMat);
       mesh.position.set(3 * (2 * i - 1), 0, -10);
       bonePoints.push(mesh);
@@ -135,12 +128,12 @@ export default function initWebScene() {
 
     const iks = [];
     // backfeet
-    for (let j = 0; j < 2; j++) {
+    for (let j = 0; j < 2; j += 1) {
       addIKForGroup(boneGroup.children[j + 1], iks, 3, bonePoints[j]);
     }
     // front feet
     boneGroup = ratMesh.children[1].children[3].children[0].children[0];
-    for (let j = 0; j < 2; j++) {
+    for (let j = 0; j < 2; j += 1) {
       addIKForGroup(boneGroup.children[j], iks, 3, bonePoints[j + 2]);
     }
     // ad ik for the spine
@@ -166,8 +159,8 @@ function addIKForSpine(boneGroup, iks) {
   const ik = new IK();
   const chain = new IKChain();
   let currentBone = boneGroup.children[0];
-  for (let i = 0; i < 5; i++) {
-    if (i == 1) {
+  for (let i = 0; i < 5; i += 1) {
+    if (i === 1) {
       currentBone = currentBone.children[2];
     } else {
       currentBone = currentBone.children[0];
@@ -187,7 +180,7 @@ function addIKForGroup(boneGroup, iks, length, boneTarget) {
   const ik = new IK();
   const chain = new IKChain();
   let currentBone = boneGroup;
-  for (let i = 0; i < length; i++) {
+  for (let i = 0; i < length; i += 1) {
     currentBone = currentBone.children[0];
     const constraints = [new IKBallConstraint(360, false)];
     // The last IKJoint must be added with a `target` as an end effector.

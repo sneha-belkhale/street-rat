@@ -1,4 +1,3 @@
-import Stats from 'stats-js';
 import GLTFLoader from 'three-gltf-loader';
 import EnvMapController from './EnvMapController';
 import ParallaxCorrectPhysicalMaterial from './shaders/ParallaxCorrectPhysicalMaterial';
@@ -133,24 +132,24 @@ export default class MainScene {
           iMeshCollision.position.copy(iMesh.position);
           iMeshCollision.scale.copy(iMesh.scale);
           iMeshCollision.quaternion.copy(iMesh.quaternion);
-          iMeshCollision.updateMatrixWorld()
+          iMeshCollision.updateMatrixWorld();
           this.scene.add(iMeshCollision);
           this.worldGrid.fillGridForBufferMesh(iMeshCollision, this.scene);
         }
       } else if (mesh && collision) {
-          mesh.applyMatrix(asset.matrixWorld);
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          this.scene.add(mesh);
-          this.setMaterial(asset.name, mesh);
+        mesh.applyMatrix(asset.matrixWorld);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        this.scene.add(mesh);
+        this.setMaterial(asset.name, mesh);
 
-          collision.applyMatrix(asset.matrixWorld);
-          collision.material.visible = false;
-          this.scene.add(collision);
-          this.worldGrid.fillGridForBufferMesh(collision, this.scene);
+        collision.applyMatrix(asset.matrixWorld);
+        collision.material.visible = false;
+        this.scene.add(collision);
+        this.worldGrid.fillGridForBufferMesh(collision, this.scene);
       }
     });
-    this.envMapController.update()
+    this.envMapController.update();
   }
 
   handleLoadProgress = () => {
@@ -168,29 +167,34 @@ export default class MainScene {
   setMaterial = (name, mesh) => {
     switch (name) {
       case 'road_01': {
-        mesh.geometry.computeBoundingBox()
-        console.log(mesh.geometry)
+        mesh.geometry.computeBoundingBox();
         mesh.material.envMap = this.cubeCamera.renderTarget.texture;
         mesh.material.roughness = 0.0;
-        this.cubeCamera.position.set(59,0,0);
-        mesh.material.onBeforeCompile = function ( shader ) {
-          mesh.material.defines["PARALLAX_CORRECT"] = '';
-          shader.uniforms.cubeMapSize =  { type: 'v3', value: new THREE.Vector3(250, 900, 830) };
-          shader.uniforms.cubeMapPos = { type: 'v3', value: new THREE.Vector3(59, 0, 0) };
-          shader.uniforms.flipEnvMap = { value: true };
-          shader.vertexShader = ParallaxCorrectPhysicalMaterial.vertexShader;
-          shader.fragmentShader = ParallaxCorrectPhysicalMaterial.fragmentShader;
-        }
+        this.cubeCamera.position.set(59, 0, 0);
+        mesh.material.onBeforeCompile = this.setBoxProjectedMaterial;
+        mesh.material.defines.PARALLAX_CORRECT = '';
 
-        this.envMapController = new EnvMapController([mesh], this.cubeCamera, this.renderer, this.scene);
-        this.envMapController.update()
+        this.envMapController = new EnvMapController(
+          [mesh], this.cubeCamera, this.renderer, this.scene,
+        );
+        this.envMapController.update();
         break;
       }
+      default:
+        break;
     }
   }
 
+  setBoxProjectedMaterial = (shader) => {
+    shader.uniforms.cubeMapSize = { type: 'v3', value: new THREE.Vector3(250, 900, 830) };
+    shader.uniforms.cubeMapPos = { type: 'v3', value: new THREE.Vector3(59, 0, 0) };
+    shader.uniforms.flipEnvMap = { value: true };
+    shader.vertexShader = ParallaxCorrectPhysicalMaterial.vertexShader;
+    shader.fragmentShader = ParallaxCorrectPhysicalMaterial.fragmentShader;
+  };
+
   update = () => {
-    if(this.envMapController){
+    if (this.envMapController) {
       // this.envMapController.update()
     }
   }

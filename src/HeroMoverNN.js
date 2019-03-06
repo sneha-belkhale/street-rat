@@ -100,12 +100,15 @@ export default class HeroMover {
       this.arrowHelperSearch = new THREE.ArrowHelper(dir, origin, length, 0xff0000);
       scene.add(this.arrowHelperSearch);
 
-      this.rayHelper = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 20), new THREE.MeshBasicMaterial(
-        {
-          color: new THREE.Color('#7fffd4'),
-          wireframe: true,
-        },
-      ));
+      this.rayHelper = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.5, 20),
+        new THREE.MeshBasicMaterial(
+          {
+            color: new THREE.Color('#7fffd4'),
+            wireframe: true,
+          },
+        ),
+      );
       scene.add(this.rayHelper);
       this.winningDir = new THREE.Vector3();
     }
@@ -152,7 +155,7 @@ export default class HeroMover {
 
     // base position is going to correspond to the foot ..
     const foot = this.bonePoints[(this.curBone + 1) % 2];
-    const forwardFoot = this.bonePoints[(this.curBone + 1) % 2 + 2];
+    const forwardFoot = this.bonePoints[((this.curBone + 1) % 2) + 2];
     const tailBone = this.bonePoints[5];
     const headBone = this.bonePoints[4];
 
@@ -166,7 +169,11 @@ export default class HeroMover {
     const tt = this.findNearestCollisionPoint(this.incomingPos);
     if (tt[0]) {
       this.incomingPos.copy(tt[1]);
-      this.incomingPos.set(Math.round(this.incomingPos.x), Math.round(this.incomingPos.y), Math.round(this.incomingPos.z));
+      this.incomingPos.set(
+        Math.round(this.incomingPos.x),
+        Math.round(this.incomingPos.y),
+        Math.round(this.incomingPos.z),
+      );
 
       forwardFoot.normal.copy(tt[2]);
       const upNew = this.alignHeroToGround();
@@ -179,24 +186,30 @@ export default class HeroMover {
 
       // get head position
       const headPos = this.adjustPosForHead(this.incomingPos.clone(), curFootOffset, upNew);
-      const headTween = new TWEEN.Tween(headBone.position).to(headPos, 400 / 3).start();
+      new TWEEN.Tween(headBone.position).to(headPos, 400 / 3).start();
 
       // tween forward foot position
       addScalarMultiple(this.incomingPos, upNew, 1);
-      this.tweener.addTween((this.curBone) % 2 + 2, forwardFoot.position, this.incomingPos, this.worldAxis.up, 60 / 3);
+      this.tweener.addTween(
+        ((this.curBone) % 2) + 2, forwardFoot.position, this.incomingPos, this.worldAxis.up, 60 / 3,
+      );
 
       // tween back foot position
       const backFootPos = addScalarMultiple(this.incomingPos.clone(), this.worldAxis.forward, -4);
-      this.tweener.addTween((this.curBone) % 2, foot.position, backFootPos, this.worldAxis.up, 60 / 3);
+      this.tweener.addTween(
+        ((this.curBone) % 2), foot.position, backFootPos, this.worldAxis.up, 60 / 3,
+      );
 
       // tween body position
       const heroPos = this.adjustPosForHero(this.incomingPos.clone(), curFootOffset, upNew);
-      const tween = new TWEEN.Tween(this.hero.position).to(heroPos, 200 / 3).delay(200 / 3).start();
-      const tween2 = new TWEEN.Tween(this.heroCamera.position).to(heroPos, 200 / 3).delay(200 / 3).start();
+      new TWEEN.Tween(this.hero.position)
+        .to(heroPos, 200 / 3).delay(200 / 3).start();
+      new TWEEN.Tween(this.heroCamera.position)
+        .to(heroPos, 200 / 3).delay(200 / 3).start();
 
       // tween tail position
       const tailPos = this.adjustPosForTail(this.incomingPos.clone(), curFootOffset, upNew);
-      const tailTween = new TWEEN.Tween(tailBone.position).to(tailPos, 300).start();
+      new TWEEN.Tween(tailBone.position).to(tailPos, 300).start();
       this.stagnantTale = true;
       setTimeout(() => { this.stagnantTale = false; }, 300);
     }
@@ -240,9 +253,8 @@ export default class HeroMover {
   }
 
 
-  findNearestCollisionPoint = (basePos, grounded = false) => {
+  findNearestCollisionPoint = (basePos) => {
     const { forward, up } = this.worldAxis;
-    const minDist = 100;
     let min = [0, 0, 0, 0];
     let found = false;
     const axis = new THREE.Vector3().crossVectors(forward, up);
@@ -264,7 +276,8 @@ export default class HeroMover {
       if (n[0]) {
         // console.log(n[0].point, n[0].face.normal);
         if (n[0].point.distanceTo(basePos) < 15) {
-          const adjustedNormal = n[0].face.normal.clone().transformDirection(n[0].object.matrixWorld);
+          const adjustedNormal = n[0].face.normal.clone()
+            .transformDirection(n[0].object.matrixWorld);
           min = [n[0].point, adjustedNormal];
           found = true;
         }
@@ -279,10 +292,13 @@ export default class HeroMover {
   }
 
   alignHeroToGround = () => {
-    const { forward, up } = this.worldAxis;
     // adjust quaternion so up vector and surface normal are aligned
-    const upNew = new THREE.Vector3(0, 1, 0).applyQuaternion(this.cameraTweener.getTargetQuat()).normalize();
-    const avgNormal = new THREE.Vector3().addVectors(this.bonePoints[2].normal, this.bonePoints[3].normal);
+    const upNew = new THREE.Vector3(0, 1, 0).applyQuaternion(
+      this.cameraTweener.getTargetQuat(),
+    ).normalize();
+    const avgNormal = new THREE.Vector3().addVectors(
+      this.bonePoints[2].normal, this.bonePoints[3].normal,
+    );
     if (!avgNormal) return;
     const upAdjustQuat = getAlignmentQuaternion(upNew, avgNormal);
     if (upAdjustQuat) {
@@ -314,12 +330,15 @@ export default class HeroMover {
   updateTailPos = () => {
     this.tailMotionCounter += 0.02;
     const tailBone = this.bonePoints[5];
-    addScalarMultiple(tailBone.position, this.worldAxis.left, 0.015 * Math.sin(this.tailMotionCounter));
+    addScalarMultiple(tailBone.position,
+      this.worldAxis.left, 0.015 * Math.sin(this.tailMotionCounter));
   }
 
   tweenHeroToCameraForward = () => {
     this.recalculateHeroAxis();
-    const forwardAdjustQuat = getAlignmentQuaternionOnPlane(this.worldAxis.forward, this.heroAxis.forward, this.heroAxis.up);
+    const forwardAdjustQuat = getAlignmentQuaternionOnPlane(
+      this.worldAxis.forward, this.heroAxis.forward, this.heroAxis.up,
+    );
     if (forwardAdjustQuat) {
       this.heroTweener.applyToTargetQuaternion(forwardAdjustQuat);
     }

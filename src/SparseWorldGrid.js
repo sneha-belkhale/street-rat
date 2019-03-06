@@ -3,23 +3,23 @@ const THREE = require('three');
 const DEBUG_MODE = false;
 
 class Line {
-    constructor(start, dir, length) {
-        this.start = start;
-        this.dir = dir.normalize();
-        this.length = length;
-    }
+  constructor(start, dir, length) {
+    this.start = start;
+    this.dir = dir.normalize();
+    this.length = length;
+  }
 
-    intersect(line) {
-        let nom = line.dir.dot(this.dir);
-        let s = (this.start.clone()
-            .sub(line.start)
-            .dot(line.dir) + line.start.clone()
-                .sub(this.start)
-                .dot(this.dir) * nom) / (1 - nom * nom);
-        let point = line.start.clone().add(line.dir.clone().multiplyScalar(s));
+  intersect(line) {
+    const nom = line.dir.dot(this.dir);
+    const s = (this.start.clone()
+      .sub(line.start)
+      .dot(line.dir) + line.start.clone()
+      .sub(this.start)
+      .dot(this.dir) * nom) / (1 - nom * nom);
+    const point = line.start.clone().add(line.dir.clone().multiplyScalar(s));
 
-        return point;
-    }
+    return point;
+  }
 }
 
 export default class SparseWorldGrid {
@@ -54,10 +54,14 @@ export default class SparseWorldGrid {
   queryPointsInRadius(posX, posY, posZ, r) {
     const meshes = {};
     const meshesArray = [];
-    for (let i = -r; i < r + 1; i+=1) {
-      for (let j = -r; j < r + 1; j+=1) {
-        for (let k = -r; k < r + 1; k+=1) {
-          const value = this.valueAtWorldPos(posX + (i * this.cellSize), posY + (j * this.cellSize), posZ + (k * this.cellSize));
+    for (let i = -r; i < r + 1; i += 1) {
+      for (let j = -r; j < r + 1; j += 1) {
+        for (let k = -r; k < r + 1; k += 1) {
+          const value = this.valueAtWorldPos(
+            posX + (i * this.cellSize),
+            posY + (j * this.cellSize),
+            posZ + (k * this.cellSize),
+          );
           if (value) {
             Object.keys(value).forEach((key) => {
               const mesh = value[key];
@@ -82,64 +86,74 @@ export default class SparseWorldGrid {
 
   // call this after setting world matrix.
   fillGridForBufferMesh(mesh, scene) {
-      if (DEBUG_MODE) {
-          var starsGeometry = new THREE.Geometry();
+    if (DEBUG_MODE) {
+      var starsGeometry = new THREE.Geometry();
+    }
+    const pos = mesh.geometry.attributes.position.array;
+    const index = mesh.geometry.index.array;
+    for (let i = 0; i < mesh.geometry.index.count; i += 3) {
+      const vertexA = new THREE.Vector3(
+        pos[3 * index[i]], pos[3 * index[i] + 1], pos[3 * index[i] + 2],
+      )
+        .applyMatrix4(mesh.matrixWorld);
+      const vertexB = new THREE.Vector3(
+        pos[3 * index[i + 1]], pos[3 * index[i + 1] + 1], pos[3 * index[i + 1] + 2],
+      )
+        .applyMatrix4(mesh.matrixWorld);
+      const vertexC = new THREE.Vector3(
+        pos[3 * index[i + 2]], pos[3 * index[i + 2] + 1], pos[3 * index[i + 2] + 2],
+      )
+        .applyMatrix4(mesh.matrixWorld);
+      // fill all from A - B
+      const lineAB = vertexB.clone().sub(vertexA);
+      const lineCA = vertexA.clone().sub(vertexC);
+      const lineBC = vertexC.clone().sub(vertexB);
+
+      const lengthAB = lineAB.length();
+      const lengthCA = lineCA.length();
+      const lengthBC = lineBC.length();
+
+      let baseLine; let sideLine1; let
+        sideLine2;
+
+      if (lengthAB > lengthCA && lengthAB > lengthBC) {
+        baseLine = new Line(vertexA, lineAB, lengthAB);
+        sideLine1 = new Line(vertexA, lineCA.multiplyScalar(-1), lengthCA);
+        sideLine2 = new Line(vertexC, lineBC, lengthBC);
+      } else if (lengthCA > lengthAB && lengthCA > lengthBC) {
+        baseLine = new Line(vertexC, lineCA, lengthCA);
+        sideLine1 = new Line(vertexC, lineBC.multiplyScalar(-1), lengthBC);
+        sideLine2 = new Line(vertexB, lineAB, lengthAB);
+      } else {
+        baseLine = new Line(vertexB, lineBC, lengthBC);
+        sideLine1 = new Line(vertexB, lineAB.multiplyScalar(-1), lengthAB);
+        sideLine2 = new Line(vertexA, lineCA, lengthCA);
       }
-      let pos = mesh.geometry.attributes.position.array;
-      let index = mesh.geometry.index.array;
-      for(let i = 0; i < mesh.geometry.index.count; i = i + 3) {
-          let vertexA = new THREE.Vector3(pos[3 * index[i]], pos[3 * index[i] + 1], pos[3 * index[i] + 2]).applyMatrix4(mesh.matrixWorld);
-          let vertexB = new THREE.Vector3(pos[3 * index[i+1]], pos[3 * index[i+1] + 1], pos[3 * index[i+1] + 2]).applyMatrix4(mesh.matrixWorld);
-          let vertexC = new THREE.Vector3(pos[3 * index[i+2]], pos[3 * index[i+2] + 1], pos[3 * index[i+2] + 2]).applyMatrix4(mesh.matrixWorld);
-          // fill all from A - B
-          let lineAB = vertexB.clone().sub(vertexA);
-          let lineCA = vertexA.clone().sub(vertexC);
-          let lineBC = vertexC.clone().sub(vertexB);
 
-          let lengthAB = lineAB.length();
-          let lengthCA = lineCA.length();
-          let lengthBC = lineBC.length();
+      for (let j = 0; j < sideLine1.length; j += this.cellSize) {
+        const nextPoint = sideLine1.start.clone().add(sideLine1.dir.normalize().clone()
+          .multiplyScalar(j));
+        const scanLine = new Line(nextPoint, baseLine.dir);
+        const intersectionPoint = scanLine.intersect(sideLine2);
 
-          let baseLine, sideLine1, sideLine2;
-
-          if (lengthAB > lengthCA && lengthAB > lengthBC) {
-              baseLine = new Line(vertexA, lineAB, lengthAB);
-              sideLine1 = new Line(vertexA, lineCA.multiplyScalar(-1), lengthCA);
-              sideLine2 = new Line(vertexC, lineBC, lengthBC);
-          } else if (lengthCA > lengthAB && lengthCA > lengthBC) {
-              baseLine = new Line(vertexC, lineCA, lengthCA);
-              sideLine1 = new Line(vertexC, lineBC.multiplyScalar(-1), lengthBC);
-              sideLine2 = new Line(vertexB, lineAB, lengthAB);
-          } else {
-              baseLine = new Line(vertexB, lineBC, lengthBC);
-              sideLine1 = new Line(vertexB, lineAB.multiplyScalar(-1), lengthAB);
-              sideLine2 = new Line(vertexA, lineCA, lengthCA);
+        // lenght is this intersection point - start point
+        const length = nextPoint.clone().sub(intersectionPoint)
+          .length();
+        const stride = baseLine.dir.clone().multiplyScalar(this.cellSize);
+        for (let k = 0; k < length; k += this.cellSize) {
+          this.setValueAtWorldPos(nextPoint.x, nextPoint.y, nextPoint.z, mesh);
+          if (DEBUG_MODE) {
+            starsGeometry.vertices.push(nextPoint.clone());
           }
-
-          for (let j = 0; j < sideLine1.length; j+=this.cellSize) {
-              let nextPoint = sideLine1.start.clone().add(sideLine1.dir.normalize().clone()
-                  .multiplyScalar(j));
-              let scanLine = new Line(nextPoint, baseLine.dir);
-              let intersectionPoint = scanLine.intersect(sideLine2);
-
-              // lenght is this intersection point - start point
-              let length = nextPoint.clone().sub(intersectionPoint)
-                  .length();
-              let stride = baseLine.dir.clone().multiplyScalar(this.cellSize)
-              for (let i = 0; i < length; i+=this.cellSize) {
-                  this.setValueAtWorldPos(nextPoint.x, nextPoint.y, nextPoint.z, mesh);
-                  if (DEBUG_MODE) {
-                      starsGeometry.vertices.push(nextPoint.clone());
-                  }
-                  nextPoint.add(stride);
-              }
-          }
+          nextPoint.add(stride);
+        }
       }
-      if (DEBUG_MODE) {
-          let starsMaterial = new THREE.PointsMaterial({ color: 0x888888 });
-          let starField = new THREE.Points(starsGeometry, starsMaterial);
-          scene.add(starField);
-      }
+    }
+    if (DEBUG_MODE) {
+      const starsMaterial = new THREE.PointsMaterial({ color: 0x888888 });
+      const starField = new THREE.Points(starsGeometry, starsMaterial);
+      scene.add(starField);
+    }
   }
 
   fillGridForMesh(mesh) {
@@ -151,8 +165,8 @@ export default class SparseWorldGrid {
     const minY = Math.floor((bbox.min.y) / this.cellSize);
     const maxY = Math.ceil((bbox.max.y) / this.cellSize);
     // top bottom
-    for (var i = minX; i <= maxX; i+=1) {
-      for (var j = minZ; j <= maxZ; j+=1) {
+    for (let i = minX; i <= maxX; i += 1) {
+      for (let j = minZ; j <= maxZ; j += 1) {
         const idx = this.getHashRaw(i, minY, j);
         this.addForIdx(idx, mesh);
         const idx2 = this.getHashRaw(i, maxY, j);
@@ -160,8 +174,8 @@ export default class SparseWorldGrid {
       }
     }
     // left right
-    for (var i = minX; i <= maxX; i+=1) {
-      for (var j = minY; j <= maxY; j+=1) {
+    for (let i = minX; i <= maxX; i += 1) {
+      for (let j = minY; j <= maxY; j += 1) {
         const idx = this.getHashRaw(i, j, minZ);
         this.addForIdx(idx, mesh);
         const idx2 = this.getHashRaw(i, j, maxZ);
@@ -169,8 +183,8 @@ export default class SparseWorldGrid {
       }
     }
     // forward backward
-    for (var i = minY; i <= maxY; i+=1) {
-      for (var j = minZ; j <= maxZ; j+=1) {
+    for (let i = minY; i <= maxY; i += 1) {
+      for (let j = minZ; j <= maxZ; j += 1) {
         const idx = this.getHashRaw(minX, i, j);
         this.addForIdx(idx, mesh);
         const idx2 = this.getHashRaw(maxX, i, j);
