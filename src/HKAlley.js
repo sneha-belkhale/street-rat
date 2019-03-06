@@ -31,7 +31,7 @@ export default function initWebScene() {
   /** BASIC THREE SETUP * */
   scene = new THREE.Scene();
   // set up camera
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 35, 100000);
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 25, 100000);
   scene.add(camera);
   // set up controls
   controls = new OrbitControls(camera);
@@ -201,7 +201,7 @@ export default function initWebScene() {
     hero.scale.set(1, 1, 1);
     bonePoints = [];
     const boneGeo = new THREE.BoxGeometry(1, 1, 1);
-    const boneMat = new THREE.MeshBasicMaterial({ color: '0xff00ff', depthWrite: true });
+    const boneMat = new THREE.MeshBasicMaterial({ color: '0xff00ff', wireframe: true });
     const numFeet = 2;
     // backfeet
     for (let i = 0; i < numFeet; i++) {
