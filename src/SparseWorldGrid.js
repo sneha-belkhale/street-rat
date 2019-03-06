@@ -1,7 +1,5 @@
 const THREE = require('three');
 
-const DEBUG_MODE = false;
-
 export default class SparseWorldGrid {
   constructor(cellSize) {
     this.grid = {};
@@ -29,10 +27,10 @@ export default class SparseWorldGrid {
   queryPointsInRadius(posX, posY, posZ, r) {
     const meshes = {};
     const meshesArray = [];
-    for (let i = -r; i < r + 1; i++) {
-      for (let j = -r; j < r + 1; j++) {
-        for (let k = -r; k < r + 1; k++) {
-          const value = this.valueAtWorldPos(posX + i * this.cellSize, posY + j * this.cellSize, posZ + k * this.cellSize);
+    for (let i = -r; i < r + 1; i+=1) {
+      for (let j = -r; j < r + 1; j+=1) {
+        for (let k = -r; k < r + 1; k+=1) {
+          const value = this.valueAtWorldPos(posX + (i * this.cellSize), posY + (j * this.cellSize), posZ + (k * this.cellSize));
           if (value) {
             Object.keys(value).forEach((key) => {
               const mesh = value[key];
@@ -64,8 +62,8 @@ export default class SparseWorldGrid {
     const minY = Math.floor((bbox.min.y) / this.cellSize);
     const maxY = Math.ceil((bbox.max.y) / this.cellSize);
     // top bottom
-    for (var i = minX; i <= maxX; i++) {
-      for (var j = minZ; j <= maxZ; j++) {
+    for (var i = minX; i <= maxX; i+=1) {
+      for (var j = minZ; j <= maxZ; j+=1) {
         const idx = this.getHashRaw(i, minY, j);
         this.addForIdx(idx, mesh);
         const idx2 = this.getHashRaw(i, maxY, j);
@@ -73,8 +71,8 @@ export default class SparseWorldGrid {
       }
     }
     // left right
-    for (var i = minX; i <= maxX; i++) {
-      for (var j = minY; j <= maxY; j++) {
+    for (var i = minX; i <= maxX; i+=1) {
+      for (var j = minY; j <= maxY; j+=1) {
         const idx = this.getHashRaw(i, j, minZ);
         this.addForIdx(idx, mesh);
         const idx2 = this.getHashRaw(i, j, maxZ);
@@ -82,8 +80,8 @@ export default class SparseWorldGrid {
       }
     }
     // forward backward
-    for (var i = minY; i <= maxY; i++) {
-      for (var j = minZ; j <= maxZ; j++) {
+    for (var i = minY; i <= maxY; i+=1) {
+      for (var j = minZ; j <= maxZ; j+=1) {
         const idx = this.getHashRaw(minX, i, j);
         this.addForIdx(idx, mesh);
         const idx2 = this.getHashRaw(maxX, i, j);

@@ -27,14 +27,6 @@ const HERO_HALF_WIDTH = 1.5;
 const HERO_HEIGHT = 4;
 const HERO_LEG_FORWARD_OFFSET = 1;
 
-const Y_AXIS = new THREE.Vector3(0, 1, 0);
-
-function containsPoint(bbox, geoPos, point) {
-  return !(point.x < (geoPos.x + bbox.min.x) || point.x > (geoPos.x + bbox.max.x)
-    || point.y < (geoPos.y + bbox.min.y) || point.y > (geoPos.y + bbox.max.y)
-    || point.z < (geoPos.z + bbox.min.z) || point.z > (geoPos.z + bbox.max.z));
-}
-
 export default class HeroMover {
   constructor(hero, iks, bonePoints, worldGrid, camera, scene) {
     this.scene = scene;
@@ -56,7 +48,7 @@ export default class HeroMover {
     this.heroCamera = new THREE.Object3D();
     scene.add(this.heroCamera);
     this.heroCamera.add(this.camera);
-    this.camera.position.set(0, 20, 50);
+    this.camera.position.set(0, 20, 40);
     this.cameraTweener = new TweenController(this.heroCamera, scene);
     this.heroTweener = new TweenController(this.hero, scene);
 
@@ -108,7 +100,12 @@ export default class HeroMover {
       this.arrowHelperSearch = new THREE.ArrowHelper(dir, origin, length, 0xff0000);
       scene.add(this.arrowHelperSearch);
 
-      this.rayHelper = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color('#7fffd4') }));
+      this.rayHelper = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 20), new THREE.MeshBasicMaterial(
+        {
+          color: new THREE.Color('#7fffd4'),
+          wireframe: true,
+        },
+      ));
       scene.add(this.rayHelper);
       this.winningDir = new THREE.Vector3();
     }
@@ -129,11 +126,11 @@ export default class HeroMover {
     }
   }
 
-  endRotate = (event) => {
+  endRotate = () => {
     this.lastMousePos.set(0, 0);
   }
 
-  onKeyUp = (event) => {
+  onKeyUp = () => {
     this.walking = false;
   }
 
@@ -237,7 +234,7 @@ export default class HeroMover {
 
   adjustPosForTail = (incomingPos, curFootOffset, up) => {
     incomingPos.add(up);
-    addScalarMultiple(incomingPos, this.worldAxis.forward, -16.5);
+    addScalarMultiple(incomingPos, this.worldAxis.forward, -16.9);
     addScalarMultiple(incomingPos, this.worldAxis.left, -2 * curFootOffset);
     return incomingPos;
   }
