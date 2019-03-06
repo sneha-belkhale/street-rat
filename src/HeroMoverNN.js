@@ -20,7 +20,7 @@ move mouse to rotate camera around the hero
 
 * */
 
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 // hero constants
 const HERO_HALF_WIDTH = 1.5;
@@ -91,6 +91,7 @@ export default class HeroMover {
     const dir = new THREE.Vector3(0, 1, 0);
     const length = 3;
     const hex = 0x0000ff;
+    this.winningDir = new THREE.Vector3();
 
 
     if (DEBUG_MODE) {
@@ -110,7 +111,6 @@ export default class HeroMover {
         ),
       );
       scene.add(this.rayHelper);
-      this.winningDir = new THREE.Vector3();
     }
   }
 
@@ -348,10 +348,12 @@ export default class HeroMover {
     this.heroTweener.update();
     this.cameraTweener.update();
 
-    const pos = new THREE.Vector3();
-    pos.addVectors(this.winningDir, this.raycaster.ray.origin);
-    this.rayHelper.lookAt(pos);
-    this.rayHelper.position.copy(this.raycaster.ray.origin);
+    if (DEBUG_MODE) {
+      const pos = new THREE.Vector3();
+      pos.addVectors(this.winningDir, this.raycaster.ray.origin);
+      this.rayHelper.lookAt(pos);
+      this.rayHelper.position.copy(this.raycaster.ray.origin);
+    }
 
     if (!this.stagnantTale) {
       this.updateTailPos();

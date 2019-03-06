@@ -16,6 +16,8 @@ initRect();
 const THREE = require('three');
 // const OrbitControls = require('three-orbit-controls')(THREE);
 
+const DEBUG_MODE = false;
+
 let scene; let camera; let renderer; let mainScene;
 let stats; let
   heroMover;
@@ -80,6 +82,9 @@ export default function initWebScene() {
     bonePoints = [];
     const boneGeo = new THREE.BoxGeometry(1, 1, 1);
     const boneMat = new THREE.MeshBasicMaterial({ color: '0xff00ff', wireframe: true });
+    if(!DEBUG_MODE){
+      boneMat.visible = false;
+    }
     const numFeet = 2;
     // backfeet
     for (let i = 0; i < numFeet; i += 1) {
@@ -122,9 +127,11 @@ export default function initWebScene() {
     boneGroup.rotateY(Math.PI / 2);
     boneGroup.position.set(0, 6.33, 0);
 
-    const helper = new THREE.SkeletonHelper(boneGroup);
-    helper.material.linewidth = 5;
-    scene.add(helper);
+    if(DEBUG_MODE){
+      const helper = new THREE.SkeletonHelper(boneGroup);
+      helper.material.linewidth = 5;
+      scene.add(helper);
+    }
 
     const iks = [];
     // backfeet
@@ -172,8 +179,10 @@ function addIKForSpine(boneGroup, iks) {
   }
   ik.add(chain);
   iks.push(ik);
-  const helper = new IKHelper(ik);
-  scene.add(helper);
+  if(DEBUG_MODE){
+    const helper = new IKHelper(ik);
+    scene.add(helper);
+  }
 }
 
 function addIKForGroup(boneGroup, iks, length, boneTarget) {
@@ -189,8 +198,10 @@ function addIKForGroup(boneGroup, iks, length, boneTarget) {
   }
   ik.add(chain);
   iks.push(ik);
-  const helper = new IKHelper(ik);
-  scene.add(helper);
+  if(DEBUG_MODE){
+    const helper = new IKHelper(ik);
+    scene.add(helper);
+  }
 }
 function onDocumentMouseMove(event) {
   event.preventDefault();
