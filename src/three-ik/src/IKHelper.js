@@ -35,7 +35,6 @@ class BoneHelper extends Object3D {
     this.add(this.boneMesh);
 
     this.axesHelper = new AxesHelper(axesSize);
-    this.axesHelper.scale.set(10,10,10)
     this.add(this.axesHelper);
   }
 }
@@ -62,7 +61,7 @@ class IKHelper extends Object3D {
     super();
 
     boneSize = boneSize || 0.1;
-    axesSize = axesSize || 0.2;
+    axesSize = axesSize || 2;
 
     if (!ik.isIK) {
       throw new Error('IKHelper must receive an IK instance.');
@@ -80,6 +79,7 @@ class IKHelper extends Object3D {
           const joint = chain.joints[i];
           const nextJoint = chain.joints[i+1];
           const distance = nextJoint ? nextJoint.distance : 0;
+
           // If a sub base, don't make another bone
           if (chain.base === joint && chain !== rootChain) {
             continue;
@@ -193,10 +193,7 @@ class IKHelper extends Object3D {
 
   updateMatrixWorld(force) {
     for (let [joint, mesh] of this._meshes) {
-      // mesh.matrix.copy(joint.bone.matrixWorld);
-      joint.bone.getWorldPosition(mesh.position)
-      joint.bone.getWorldQuaternion(mesh.quaternion)
-      mesh.updateMatrix()
+      mesh.matrix.copy(joint.bone.matrixWorld);
     }
     super.updateMatrixWorld(force);
   }

@@ -1,5 +1,5 @@
 import { Quaternion, Matrix4, Vector3 } from 'three';
-import { transformPoint, getCentroid, getWorldPosition, setQuaternionFromDirection, setFixedQuaternionFromDirection } from './utils.js';
+import { transformPoint, getCentroid, getWorldPosition, setQuaternionFromDirection, rotateOnAxis } from './utils.js';
 import IKBallConstraint from './IKBallConstraint.js';
 
 const Y_AXIS = new Vector3(0, 1, 0);
@@ -59,7 +59,6 @@ class IKJoint {
     if (!this.constraints) {
       return;
     }
-
     let constraintApplied = false;
     for (let constraint of this.constraints) {
       if (constraint && constraint._apply) {
@@ -121,7 +120,7 @@ class IKJoint {
    * @private
    */
   _getWorldDirection(joint) {
-    return new Vector3().subVectors(joint._getWorldPosition(),this._getWorldPosition()).normalize();
+    return new Vector3().subVectors(this._getWorldPosition(), joint._getWorldPosition()).normalize();
   }
 
   /**
@@ -166,6 +165,7 @@ class IKJoint {
   _applyWorldPosition() {
     let direction = new Vector3().copy(this._direction);
     let position = new Vector3().copy(this._getWorldPosition());
+
     const parent = this.bone.parent;
 
     if (parent) {
@@ -177,12 +177,14 @@ class IKJoint {
       this._updateMatrixWorld();
 
       this._worldToLocalDirection(direction);
-
-      if(this._isAxisAligned()) {
-        setQuaternionFromDirection(direction, Y_AXIS, this.bone.quaternion);
+      // setQuaternionFromDirection(direction, Y_AXIS, this.bone.quaternion);
+      //align locally x axis to x axis
+      if (this.constraints[0] && this.constraints[0].type === "hinge") {
+        rotateOnAxis(this.bone, direction, this.constraints[0].axis);
       } else {
         setQuaternionFromDirection(direction, Y_AXIS, this.bone.quaternion);
       }
+
     } else {
       this.bone.position.copy(position);
     }
@@ -199,17 +201,7 @@ class IKJoint {
    * @return {THREE.Vector3}
    */
   _getWorldDistance(joint) {
-    return -this._worldPosition.distanceTo(joint.isIKJoint ? joint._getWorldPosition() : getWorldPosition(joint, new Vector3()));
-  }
-
-  _isAxisAligned() {
-    //TODO: axis aligned should be another constraint..
-    if(this.constraints[0]){
-      if(this.constraints[0].axisAligned){
-        return true;
-      }
-    }
-    return false;
+    return this._worldPosition.distanceTo(joint.isIKJoint ? joint._getWorldPosition() : getWorldPosition(joint, new Vector3()));
   }
 }
 

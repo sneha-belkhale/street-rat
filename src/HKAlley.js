@@ -2,7 +2,7 @@ import Stats from 'stats-js';
 // import GlowShader from './shaders/GlowShader';
 import HeroMoverNN from './HeroMoverNN';
 import {
-  IK, IKChain, IKJoint, IKBallConstraint, IKHelper, setZForward,
+  IK, IKChain, IKJoint, IKBallConstraint, IKHingeConstraint, IKHelper, setZForward,
 } from './three-ik/src';
 import FBXLoader from './libs/FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
@@ -145,17 +145,17 @@ export default function initWebScene() {
 
     const iks = [];
     // backfeet
+    const axes = [new THREE.Vector3(0.9,-0.7,0).normalize(), new THREE.Vector3(0.1,-0.9,0).normalize()]
     for (let j = 0; j < 2; j += 1) {
-      addIKForGroup(boneGroup.children[j + 1], iks, 3, bonePoints[j]);
+      addIKForBackFeet(boneGroup.children[j + 1], iks, 4, bonePoints[j], axes[j]);
     }
+
     // front feet
-
     const { children } = ratMesh;
-
     /* eslint-disable-next-line prefer-destructuring */
     boneGroup = children[1].children[3].children[0].children[0];
     for (let j = 0; j < 2; j += 1) {
-      addIKForGroup(boneGroup.children[j], iks, 3, bonePoints[j + 2]);
+      addIKForGroup(boneGroup.children[j], iks, 4, bonePoints[j + 2]);
     }
     // ad ik for the spine
     /* eslint-disable-next-line prefer-destructuring */
@@ -193,6 +193,36 @@ function addIKForSpine(boneGroup, iks) {
     const constraints = [new IKBallConstraint(180)];
     // The last IKJoint must be added with a `target` as an end effector.
     const target = i === 4 ? bonePoints[4] : null;
+    chain.add(new IKJoint(currentBone, { constraints }), { target });
+  }
+  ik.add(chain);
+  iks.push(ik);
+  if (DEBUG_MODE) {
+    const helper = new IKHelper(ik);
+    scene.add(helper);
+  }
+}
+
+function addIKForBackFeet(boneGroup, iks, length, boneTarget, axis) {
+  const ik = new IK();
+  const chain = new IKChain();
+  let currentBone = boneGroup;
+
+  const constraintBall = new IKBallConstraint(360);
+  const constraintHinge = new IKHingeConstraint(360, axis, scene);
+  for (let i = 0; i < length; i += 1) {
+    /* eslint-disable-next-line prefer-destructuring */
+    currentBone = currentBone.children[0];
+    let constraints;
+    if(i === 0) {
+      constraints = [constraintBall];
+    } else if (i === (length - 2)){
+      constraints = [new IKHingeConstraint(120, axis, scene)];
+    } else {
+      constraints = [constraintHinge];
+    }
+    // The last IKJoint must be added with a `target` as an end effector.
+    const target = i === (length - 1) ? boneTarget : null;
     chain.add(new IKJoint(currentBone, { constraints }), { target });
   }
   ik.add(chain);
