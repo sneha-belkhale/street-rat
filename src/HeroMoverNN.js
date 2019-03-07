@@ -299,7 +299,7 @@ export default class HeroMover {
     const avgNormal = new THREE.Vector3().addVectors(
       this.bonePoints[2].normal, this.bonePoints[3].normal,
     );
-    if (!avgNormal) return;
+    if (!avgNormal) return null;
     const upAdjustQuat = getAlignmentQuaternion(upNew, avgNormal);
     if (upAdjustQuat) {
       this.heroTweener.applyToTargetQuaternion(upAdjustQuat);

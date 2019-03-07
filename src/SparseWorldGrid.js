@@ -35,6 +35,7 @@ export default class SparseWorldGrid {
       Math.round(posZ / this.cellSize)}`;
   }
 
+  /* eslint-disable-next-line class-methods-use-this */
   getHashRaw(posX, posY, posZ) {
     return `${(posX)}:${
       (posY)}:${
@@ -86,8 +87,9 @@ export default class SparseWorldGrid {
 
   // call this after setting world matrix.
   fillGridForBufferMesh(mesh, scene) {
+    let starsGeometry = null;
     if (DEBUG_MODE) {
-      var starsGeometry = new THREE.Geometry();
+      starsGeometry = new THREE.Geometry();
     }
     const pos = mesh.geometry.attributes.position.array;
     const index = mesh.geometry.index.array;

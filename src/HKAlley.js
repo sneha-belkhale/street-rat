@@ -2,7 +2,7 @@ import Stats from 'stats-js';
 // import GlowShader from './shaders/GlowShader';
 import HeroMoverNN from './HeroMoverNN';
 import {
-  IK, IKChain, IKJoint, IKBallConstraint, IKHelper,
+  IK, IKChain, IKJoint, IKBallConstraint, IKHelper, setZForward,
 } from './three-ik/src';
 import FBXLoader from './libs/FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
@@ -16,7 +16,7 @@ initRect();
 const THREE = require('three');
 // const OrbitControls = require('three-orbit-controls')(THREE);
 
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 let scene; let camera; let renderer; let mainScene;
 let stats; let
@@ -77,12 +77,13 @@ export default function initWebScene() {
   const ratPromise = fbxLoader.load(require('./assets/rat-03.fbx')).then((ratMesh) => {
     scene.add(ratMesh);
     const hero = ratMesh;
+    hero.updateMatrixWorld();
     hero.position.set(30, 0, -30);
     hero.scale.set(1, 1, 1);
     bonePoints = [];
     const boneGeo = new THREE.BoxGeometry(1, 1, 1);
     const boneMat = new THREE.MeshBasicMaterial({ color: '0xff00ff', wireframe: true });
-    if(!DEBUG_MODE){
+    if (!DEBUG_MODE) {
       boneMat.visible = false;
     }
     const numFeet = 2;
@@ -126,8 +127,17 @@ export default function initWebScene() {
     boneGroup.position.set(0, 0, 0);
     boneGroup.rotateY(Math.PI / 2);
     boneGroup.position.set(0, 6.33, 0);
+    // boneGroup.updateMatrixWorld()
 
-    if(DEBUG_MODE){
+    setZForward(boneGroup.children[0]);
+    setZForward(boneGroup.children[1]);
+    setZForward(boneGroup.children[2]);
+    setZForward(boneGroup.children[3]);
+
+    rat.bind(rat.skeleton);
+
+
+    if (DEBUG_MODE) {
       const helper = new THREE.SkeletonHelper(boneGroup);
       helper.material.linewidth = 5;
       scene.add(helper);
@@ -139,14 +149,20 @@ export default function initWebScene() {
       addIKForGroup(boneGroup.children[j + 1], iks, 3, bonePoints[j]);
     }
     // front feet
-    boneGroup = ratMesh.children[1].children[3].children[0].children[0];
+
+    const { children } = ratMesh;
+
+    /* eslint-disable-next-line prefer-destructuring */
+    boneGroup = children[1].children[3].children[0].children[0];
     for (let j = 0; j < 2; j += 1) {
       addIKForGroup(boneGroup.children[j], iks, 3, bonePoints[j + 2]);
     }
     // ad ik for the spine
+    /* eslint-disable-next-line prefer-destructuring */
     backHip = ratMesh.children[1].children[3];
     addIKForSpine(backHip, iks);
     // ad ik for the tail
+    /* eslint-disable-next-line prefer-destructuring */
     const tail = ratMesh.children[1].children[0];
     addIKForGroup(tail, iks, 7, bonePoints[5]);
     heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
@@ -168,8 +184,10 @@ function addIKForSpine(boneGroup, iks) {
   let currentBone = boneGroup.children[0];
   for (let i = 0; i < 5; i += 1) {
     if (i === 1) {
+      /* eslint-disable-next-line prefer-destructuring */
       currentBone = currentBone.children[2];
     } else {
+      /* eslint-disable-next-line prefer-destructuring */
       currentBone = currentBone.children[0];
     }
     const constraints = [new IKBallConstraint(180)];
@@ -179,7 +197,7 @@ function addIKForSpine(boneGroup, iks) {
   }
   ik.add(chain);
   iks.push(ik);
-  if(DEBUG_MODE){
+  if (DEBUG_MODE) {
     const helper = new IKHelper(ik);
     scene.add(helper);
   }
@@ -190,6 +208,7 @@ function addIKForGroup(boneGroup, iks, length, boneTarget) {
   const chain = new IKChain();
   let currentBone = boneGroup;
   for (let i = 0; i < length; i += 1) {
+    /* eslint-disable-next-line prefer-destructuring */
     currentBone = currentBone.children[0];
     const constraints = [new IKBallConstraint(360, false)];
     // The last IKJoint must be added with a `target` as an end effector.
@@ -198,7 +217,7 @@ function addIKForGroup(boneGroup, iks, length, boneTarget) {
   }
   ik.add(chain);
   iks.push(ik);
-  if(DEBUG_MODE){
+  if (DEBUG_MODE) {
     const helper = new IKHelper(ik);
     scene.add(helper);
   }
