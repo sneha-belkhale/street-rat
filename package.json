@@ -19,7 +19,9 @@
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
     "lint": "node_modules/.bin/eslint .",
-    "lint:fix": "node_modules/.bin/eslint . --fix"
+    "lint:fix": "node_modules/.bin/eslint . --fix",
+    "push": "rsync -azP --delete  public/scene/ kiko@104.236.135.111:~/hkr-assets/scene",
+    "pull": "rsync -azP --delete  kiko@104.236.135.111:~/hkr-assets/scene/ public/scene"
   },
   "devDependencies": {
     "eslint-config-airbnb": "^17.1.0",
