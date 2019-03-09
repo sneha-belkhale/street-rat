@@ -19,10 +19,13 @@
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
     "lint": "node_modules/.bin/eslint .",
-    "lint:fix": "node_modules/.bin/eslint . --fix"
+    "lint:fix": "node_modules/.bin/eslint . --fix",
+    "push": "rsync -azP --delete  public/scene/ kiko@104.236.135.111:~/hkr-assets/scene",
+    "pull": "rsync -azP --delete  kiko@104.236.135.111:~/hkr-assets/scene/ public/scene"
   },
   "devDependencies": {
     "eslint-config-airbnb": "^17.1.0",
+    "husky": "^1.3.1",
     "react-scripts": "^2.1.5"
   },
   "browserslist": [
@@ -30,5 +33,12 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn lint",
+      "pre-push": "yarn push",
+      "post-merge": "yarn pull"
+    }
+  }
 }

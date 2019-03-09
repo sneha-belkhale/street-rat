@@ -145,7 +145,10 @@ export default function initWebScene() {
 
     const iks = [];
     // backfeet
-    const axes = [new THREE.Vector3(0.9,-0.7,0).normalize(), new THREE.Vector3(0.1,-0.9,0).normalize()]
+    const axes = [
+      new THREE.Vector3(0.9, -0.7, 0).normalize(),
+      new THREE.Vector3(0.1, -0.9, 0).normalize(),
+    ];
     for (let j = 0; j < 2; j += 1) {
       addIKForBackFeet(boneGroup.children[j + 1], iks, 4, bonePoints[j], axes[j]);
     }
@@ -214,9 +217,9 @@ function addIKForBackFeet(boneGroup, iks, length, boneTarget, axis) {
     /* eslint-disable-next-line prefer-destructuring */
     currentBone = currentBone.children[0];
     let constraints;
-    if(i === 0) {
+    if (i === 0) {
       constraints = [constraintBall];
-    } else if (i === (length - 2)){
+    } else if (i === (length - 2)) {
       constraints = [new IKHingeConstraint(120, axis, scene)];
     } else {
       constraints = [constraintHinge];
