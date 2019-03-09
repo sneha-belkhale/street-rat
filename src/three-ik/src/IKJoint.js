@@ -3,6 +3,7 @@ import { transformPoint, getCentroid, getWorldPosition, setQuaternionFromDirecti
 import IKBallConstraint from './IKBallConstraint.js';
 
 const Y_AXIS = new Vector3(0, 1, 0);
+const Z_AXIS = new Vector3(0, 0, 1);
 
 /**
  * A class for a joint.
@@ -26,6 +27,9 @@ class IKJoint {
     this._isSubBase = false;
     this._subBasePositions = null;
     this.isIKJoint = true;
+
+    this._originalUp = new Vector3(0,1,0);
+    this._originalUp.applyQuaternion(this.bone.quaternion);
 
     this._updateWorldPosition();
   }
@@ -182,9 +186,8 @@ class IKJoint {
       if (this.constraints[0] && this.constraints[0].type === "hinge") {
         rotateOnAxis(this.bone, direction, this.constraints[0].axis);
       } else {
-        setQuaternionFromDirection(direction, Y_AXIS, this.bone.quaternion);
+        setQuaternionFromDirection(direction, this._originalUp, this.bone.quaternion);
       }
-
     } else {
       this.bone.position.copy(position);
     }

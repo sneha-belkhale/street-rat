@@ -41,12 +41,18 @@ class IKHingeConstraint {
 
     const rotationPlaneNormal = joint._localToWorldDirection(new Vector3().copy(this.axis)).normalize();
     this.rotationPlane.normal = rotationPlaneNormal;
-    // var jointbonepos = joint.bone.getWorldPosition(new Vector3());
-    // this.arrowHelper.position.copy(jointbonepos)
-    // this.arrowHelper.setDirection(rotationPlaneNormal)
+    var jointbonepos = joint.bone.getWorldPosition(new Vector3());
+    this.arrowHelper.position.copy(jointbonepos)
+    this.arrowHelper.setDirection(rotationPlaneNormal)
     var projectedDir = this.rotationPlane.projectPoint(direction, new Vector3())
     var parentDirectionProjected = this.rotationPlane.projectPoint(parentDirection, new Vector3())
     var currentAngle = projectedDir.angleTo(parentDirectionProjected) * RAD2DEG;
+
+    var cross = new Vector3().crossVectors(projectedDir, parentDirectionProjected)
+    if(cross.dot(rotationPlaneNormal) > 0){
+      currentAngle += 180;
+    }
+
     if(currentAngle > this.angle){
       parentDirectionProjected.applyAxisAngle(rotationPlaneNormal, this.angle/RAD2DEG);
       joint._setDirection(parentDirectionProjected);

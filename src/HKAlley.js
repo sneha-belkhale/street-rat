@@ -117,7 +117,7 @@ export default function initWebScene() {
     rat.material = new THREE.MeshPhysicalMaterial({
       skinning: true,
       color: new THREE.Color('#0ff0ff'),
-      // opacity: 0.01,
+      opacity: 0.8,
       transparent: true,
     });
     rat.castShadow = true;
@@ -128,11 +128,10 @@ export default function initWebScene() {
     boneGroup.rotateY(Math.PI / 2);
     boneGroup.position.set(0, 6.33, 0);
     // boneGroup.updateMatrixWorld()
-
-    setZForward(boneGroup.children[0]);
-    setZForward(boneGroup.children[1]);
-    setZForward(boneGroup.children[2]);
-    setZForward(boneGroup.children[3]);
+    setZForward(boneGroup.children[0], scene);
+    setZForward(boneGroup.children[1], scene);
+    setZForward(boneGroup.children[2], scene);
+    setZForward(boneGroup.children[3], scene);
 
     rat.bind(rat.skeleton);
 
@@ -145,7 +144,9 @@ export default function initWebScene() {
 
     const iks = [];
     // backfeet
-    const axes = [new THREE.Vector3(0.9,-0.7,0).normalize(), new THREE.Vector3(0.1,-0.9,0).normalize()]
+    // const axes = [new THREE.Vector3(0.9,-0.7,0).normalize(), new THREE.Vector3(-0.02,-0.9,0).normalize()]
+    const axes = [new THREE.Vector3(-1,0,0).normalize(), new THREE.Vector3(1,0,0).normalize()]
+
     for (let j = 0; j < 2; j += 1) {
       addIKForBackFeet(boneGroup.children[j + 1], iks, 4, bonePoints[j], axes[j]);
     }
@@ -154,8 +155,9 @@ export default function initWebScene() {
     const { children } = ratMesh;
     /* eslint-disable-next-line prefer-destructuring */
     boneGroup = children[1].children[3].children[0].children[0];
+    const axesb = [new THREE.Vector3(-1,0,0).normalize(), new THREE.Vector3(1,0,0).normalize()]
     for (let j = 0; j < 2; j += 1) {
-      addIKForGroup(boneGroup.children[j], iks, 4, bonePoints[j + 2]);
+      addIKForBackFeet(boneGroup.children[j], iks, 4, bonePoints[j + 2], axesb[j]);
     }
     // ad ik for the spine
     /* eslint-disable-next-line prefer-destructuring */
@@ -208,7 +210,7 @@ function addIKForBackFeet(boneGroup, iks, length, boneTarget, axis) {
   const chain = new IKChain();
   let currentBone = boneGroup;
 
-  const constraintBall = new IKBallConstraint(360);
+  const constraintBall = new IKBallConstraint(180);
   const constraintHinge = new IKHingeConstraint(360, axis, scene);
   for (let i = 0; i < length; i += 1) {
     /* eslint-disable-next-line prefer-destructuring */
@@ -217,7 +219,7 @@ function addIKForBackFeet(boneGroup, iks, length, boneTarget, axis) {
     if(i === 0) {
       constraints = [constraintBall];
     } else if (i === (length - 2)){
-      constraints = [new IKHingeConstraint(120, axis, scene)];
+      constraints = [new IKHingeConstraint(130, axis, scene)];
     } else {
       constraints = [constraintHinge];
     }

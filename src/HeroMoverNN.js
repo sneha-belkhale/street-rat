@@ -23,7 +23,7 @@ move mouse to rotate camera around the hero
 const DEBUG_MODE = false;
 
 // hero constants
-const HERO_HALF_WIDTH = 1.5;
+const HERO_HALF_WIDTH = 1.4;
 const HERO_HEIGHT = 4;
 const HERO_LEG_FORWARD_OFFSET = 1;
 
@@ -190,14 +190,16 @@ export default class HeroMover {
 
       // tween forward foot position
       addScalarMultiple(this.incomingPos, upNew, 1);
+      const frontFootPos = addScalarMultiple(this.incomingPos.clone(), this.worldAxis.forward, 2);
+
       this.tweener.addTween(
-        ((this.curBone) % 2) + 2, forwardFoot.position, this.incomingPos, this.worldAxis.up, 60 / 3,
+        ((this.curBone) % 2) + 2, forwardFoot.position, frontFootPos, this.worldAxis.up, 80 / 3,
       );
 
       // tween back foot position
       const backFootPos = addScalarMultiple(this.incomingPos.clone(), this.worldAxis.forward, -4);
       this.tweener.addTween(
-        ((this.curBone) % 2), foot.position, backFootPos, this.worldAxis.up, 60 / 3,
+        ((this.curBone) % 2), foot.position, backFootPos, this.worldAxis.up, 80 / 3,
       );
 
       // tween body position

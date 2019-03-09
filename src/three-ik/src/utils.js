@@ -67,7 +67,6 @@ export function setQuaternionFromDirection(direction, up, target) {
   const z = t3;
   const m = m1;
   const el = m1.elements;
-
   z.copy(direction);
   x.crossVectors(up, z);
 
