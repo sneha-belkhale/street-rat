@@ -9,7 +9,6 @@ const t1 = new Vector3();
 const t2 = new Vector3();
 const t3 = new Vector3();
 const m1 = new Matrix4();
-const X_AXIS = new Vector3(1,0,0);
 
 /**
  * Returns the world position of object and sets
@@ -29,12 +28,11 @@ export function getWorldPosition(object, target) {
  * @param {THREE.Object3D} obj2
  * @return {number}
  */
-export function getWorldDistance(obj1, obj2) {
-  // getWorldPosition(obj1, t1);
-  // getWorldPosition(obj2, t2);
-  // return a.distanceTo(b);
-  return 3;
-}
+// export function getWorldDistance(obj1, obj2) {
+//   getWorldPosition(obj1, t1);
+//   getWorldPosition(obj2, t2);
+//   return a.distanceTo(b);
+// }
 
 /**
  * Sets the target to the centroid position between all passed in
@@ -53,6 +51,16 @@ export function getCentroid(positions, target) {
   return target;
 };
 
+/**
+ * Takes a direction vector and an up vector and sets
+ * `target` quaternion to the rotation. Similar to THREE.Matrix4's
+ * `lookAt` function, except rather than taking two Vector3 points,
+ * we've already calculaeld the direction earlier so skip the first half.
+ *
+ * @param {THREE.Vector3} direction
+ * @param {THREE.Vector3} up
+ * @param {THREE.Quaternion} target
+ */
 export function setQuaternionFromDirection(direction, up, target) {
   const x = t1;
   const y = t2;
@@ -85,51 +93,6 @@ export function setQuaternionFromDirection(direction, up, target) {
 }
 
 /**
- * Takes a direction vector and an up vector and sets
- * `target` quaternion to the rotation. Similar to THREE.Matrix4's
- * `lookAt` function, except rather than taking two Vector3 points,
- * we've already calculaeld the direction earlier so skip the first half.
- *
- * @param {THREE.Vector3} direction
- * @param {THREE.Vector3} up
- * @param {THREE.Quaternion} target
- */
-
-
-const t = new Vector3();
-const q = new Quaternion()
-const p = new Plane()
-
-export function getAlignmentQuaternion(fromDir, toDir) {
- var adjustAxis = t.crossVectors(fromDir, toDir).normalize()
- var adjustAngle = fromDir.angleTo(toDir)
-
- if(adjustAngle > 0.01 && adjustAngle < 1){
-   var adjustQuat = q.setFromAxisAngle(adjustAxis, adjustAngle);
-   return adjustQuat;
- }
- return null;
-}
-
-export function getAlignmentQuaternionOnPlane(toVector, fromVector, normal){
- p.normal = normal;
- var projectedVec = p.projectPoint(toVector, new Vector3()).normalize()
- var quat = getAlignmentQuaternion(fromVector, projectedVec)
- return quat;
-}
-
-
-export function setFixedQuaternionFromDirection(direction, up, target) {
-  var xAxis = new Vector3(1,0,0).applyQuaternion(target)
-  var dirOld = new Vector3(0,0,-1).applyQuaternion(target)
-  var forwardAdjustQuat = getAlignmentQuaternionOnPlane(direction, dirOld, xAxis)
-  if(forwardAdjustQuat){
-    target.premultiply(forwardAdjustQuat)
-  }
-  return;
-}
-
-/**
  * Implementation of Unity's Transform.transformPoint, which is similar
  * to three's Vector3.transformDirection, except we want to take scale into account,
  * as we're not transforming a direction. Function taken from BabylonJS.
@@ -154,3 +117,33 @@ export function transformPoint(vector, matrix, target) {
   const w = (vector.x * e[3]) + (vector.y * e[7]) + (vector.z * e[11]) + e[15];
   target.set(x / w, y / w, z / w);
 };
+
+const t = new Vector3();
+const q = new Quaternion();
+const p = new Plane();
+
+export function getAlignmentQuaternion(fromDir, toDir) {
+  const adjustAxis = t.crossVectors(fromDir, toDir).normalize();
+  const adjustAngle = fromDir.angleTo(toDir);
+
+  if (adjustAngle > 0.01 && adjustAngle < 3.14) {
+    const adjustQuat = q.setFromAxisAngle(adjustAxis, adjustAngle);
+    return adjustQuat;
+  }
+  return null;
+}
+
+export function getAlignmentQuaternionOnPlane(toVector, fromVector, normal) {
+  p.normal = normal;
+  const projectedVec = p.projectPoint(toVector, new Vector3()).normalize();
+  const quat = getAlignmentQuaternion(fromVector, projectedVec);
+  return quat;
+}
+
+export function rotateOnAxis(bone, direction, axis) {
+  var forward = new Vector3(0,0,1).applyQuaternion(bone.quaternion);
+  var q = getAlignmentQuaternionOnPlane(direction,forward,axis);
+  if(q){
+    bone.quaternion.premultiply(q)
+  }
+}
