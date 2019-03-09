@@ -1,0 +1,3 @@
+[submodule "src/THREE.IK"]
+	path = src/THREE.IK
+	url = https://github.com/sneha-belkhale/THREE.IK.git

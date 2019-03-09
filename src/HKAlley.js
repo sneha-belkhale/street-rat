@@ -2,8 +2,11 @@ import Stats from 'stats-js';
 // import GlowShader from './shaders/GlowShader';
 import HeroMoverNN from './HeroMoverNN';
 import {
-  IK, IKChain, IKJoint, IKBallConstraint, IKHingeConstraint, IKHelper, setZForward,
-} from './three-ik/src';
+  IK, IKChain, IKJoint, IKBallConstraint, IKHingeConstraint, IKHelper
+} from './THREE.IK/src';
+import {
+  setZForward
+} from './misc/AxisUtils';
 import FBXLoader from './libs/FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
 import MainScene from './MainScene';

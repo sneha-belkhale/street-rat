@@ -61,7 +61,7 @@ class IKHelper extends Object3D {
     super();
 
     boneSize = boneSize || 0.1;
-    axesSize = axesSize || 2;
+    axesSize = axesSize || 0.2;
 
     if (!ik.isIK) {
       throw new Error('IKHelper must receive an IK instance.');
