@@ -216,7 +216,7 @@ function addIKForBackFeet(boneGroup, iks, length, boneTarget, axis) {
     /* eslint-disable-next-line prefer-destructuring */
     currentBone = currentBone.children[0];
     let constraints;
-    if(i === 0) {
+    if (i === 0) {
       constraints = [constraintBall];
     } else if (i === (length - 2)){
       constraints = [new IKHingeConstraint(130, axis, scene)];
