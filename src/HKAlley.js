@@ -21,7 +21,7 @@ const THREE = require('three');
 
 const DEBUG_MODE = true;
 
-let scene; let camera; let renderer; let mainScene;
+let scene; let mainCamera; let sideCamera; let renderer; let mainScene;
 let stats; let
   heroMover;
 let worldGrid; let backHip; let tailPoint; let bonePoints;
@@ -29,11 +29,15 @@ const mouse = new THREE.Vector2();
 export default function initWebScene() {
   /** BASIC THREE SETUP * */
   scene = new THREE.Scene();
-  // set up camera
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 25, 100000);
-  scene.add(camera);
+  // set up mainCamera
+  mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 25, 100000);
+  sideCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 25, 100000);
+  mainCamera.add(sideCamera)
+  sideCamera.position.set(30,-10,-40)
+  sideCamera.rotateY(Math.PI/2)
+  scene.add(mainCamera);
   // set up controls
-  // const controls = new OrbitControls(camera);
+  // const controls = new OrbitControls(mainCamera);
   // restrict movement to stay within the room
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.antialias = true;
@@ -170,7 +174,7 @@ export default function initWebScene() {
     /* eslint-disable-next-line prefer-destructuring */
     const tail = ratMesh.children[1].children[0];
     addIKForGroup(tail, iks, 7, bonePoints[5]);
-    heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, camera, scene);
+    heroMover = new HeroMoverNN(hero, iks, bonePoints, worldGrid, mainCamera, scene);
   });
 
   // start the render loop once all objs/fbx things are done loading
@@ -271,6 +275,6 @@ function update() {
   if (heroMover) {
     heroMover.update();
   }
-  renderer.render(scene, camera);
+  renderer.render(scene, sideCamera);
   stats.end();
 }
