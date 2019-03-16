@@ -7,6 +7,7 @@
  #### [ + ] Box Projected Env Maps for realistic reflections
  #### [ + ] Procedural Animation with Inverse Kinematics 
  #### [ + ] Collision (yes I know it's been implemented 100 times.. but for some reason I could not find a usable example)
+ #### [ + ] Collision camera for unobstructed views of the cyborg rat
  #### [ + ] Importing scenes from HoudiniFX into three.js
 
 
@@ -22,16 +23,37 @@ Here is an example of how to use it:
 
 `var worldGrid = new SparseWorldGrid(20);`
 
-#### 2. Add mesh to the sparse grid. This will fill the appropriate cells (w.r.t the mesh bbox) with a pointer to the mesh. Multiple meshes may occupy the same grid, and that is expected with larger cell sizes.
+#### 2. add mesh to the sparse grid. This will fill the appropriate cells (w.r.t the mesh bbox) with a pointer to the mesh. Multiple meshes may occupy the same grid, and that is expected with larger cell sizes.
 
 `worldGrid.fillGridForMesh(collisionMesh);`
 
-#### 3. Before raycasting, query meshes in a cell radius from the position. My cell size was 20 units, which was way 2 times the size of the character, so a radius of 1 (20 units) was more than enough. 
+#### 3. before raycasting, query meshes in a cell radius from the position. My cell size was 20 units, which was way 2 times the size of the character, so a radius of 1 (20 units) was more than enough. 
 
 `var meshes = this.worldGrid.queryPointsInRadius(basePos.x, basePos.y, basePos.z, 1)`
 
 #### 4. raycast the subset!
 `var n = this.raycaster.intersectObjects(meshes);`
+
+
+### Collision Camera
+At first, we implemented a camera that just stays at a fixed distance from the rat, rotating smoothly as the rat climbs up surfaces. However, the rat was constantly obstructed by objects in the scene, so the next step was to make the camera collide with objects in the scene. 
+
+To do this, we shoot a ray from the camera to the rat, and if this ray intersects with another object in the scene before it intersects the rat, there is an obstruction, and we move the camera to the point of intersection with the world object. If there is no obstruction, we move the camera slowly back to it's original position. 
+
+Here is an example of how to use it:
+
+#### 1. initialize camera collider, giving the camera ( which in our case was parented to another object following the hero ), the hero, zoom in speed, and zoom out step. The last two parameters need to be played with for optimal results, zoom out step ideally should be less than the speed of hero forward movement. 
+`this.cameraCollider = new CameraCollider(this.camera, this.hero, 200, 0.05)`
+
+#### 2. on update, we call the function below, which utilizes the sparse world grid to query meshes around the camera. If you don't have many objects in your scene, you could get away without the optimization and use all meshes in the scene. We then feed in the meshes to the camera collider, which updates the camera position~
+
+``` 
+cameraCollideCheck = () => {
+    var camPos = this.camera.getWorldPosition(new THREE.Vector3());
+    const meshes = this.worldGrid.queryPointsInRadius(camPos.x, camPos.y, camPos.z, 3);
+    this.cameraCollider.update(meshes)
+}
+```
 
 
 
