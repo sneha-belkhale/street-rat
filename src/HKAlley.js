@@ -30,8 +30,8 @@ export default function initWebScene() {
   /** BASIC THREE SETUP * */
   scene = new THREE.Scene();
   // set up mainCamera
-  mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 25, 100000);
-  sideCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 25, 100000);
+  mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
+  sideCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
   mainCamera.add(sideCamera)
   sideCamera.position.set(30,-10,-40)
   sideCamera.rotateY(Math.PI/2)
@@ -90,9 +90,9 @@ export default function initWebScene() {
     bonePoints = [];
     const boneGeo = new THREE.BoxGeometry(1, 1, 1);
     const boneMat = new THREE.MeshBasicMaterial({ color: '0xff00ff', wireframe: true });
-    if (!DEBUG_MODE) {
+    // if (!DEBUG_MODE) {
       boneMat.visible = false;
-    }
+    // }
     const numFeet = 2;
     // backfeet
     for (let i = 0; i < numFeet; i += 1) {
@@ -275,6 +275,6 @@ function update() {
   if (heroMover) {
     heroMover.update();
   }
-  renderer.render(scene, sideCamera);
+  renderer.render(scene, mainCamera);
   stats.end();
 }

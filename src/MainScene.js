@@ -64,7 +64,7 @@ export default class MainScene {
             const { _color: color, _intensity: intensity } = child.geometry.attributes;
 
             const lightColor = new THREE.Color(...color.array);
-            const lightIntensity = intensity.array[0] * 10000;
+            const lightIntensity = intensity.array[0] * 20000;
             const lightDistance = 0.0;
             const decay = 2;
 

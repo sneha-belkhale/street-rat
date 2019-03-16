@@ -42,7 +42,7 @@ function updateTransformations(parentBone, worldPos, scene) {
 
     //preserve the original up vectors
     var up = _worldToLocalDirection(worldPos[parentBone.id][1].clone(), parentBone)
-    setQuaternionFromDirection(childBoneDir, up, parentBone.quaternion)
+    setQuaternionFromDirection(childBoneDir, Y_AXIS, parentBone.quaternion)
     parentBone.updateMatrixWorld();
 
     //set child bone position relative to the new parent matrix.

@@ -1,5 +1,7 @@
 import ParabolicFootTweener from './Tweener';
 import TweenController from './TweenController';
+import CameraCollider from './CameraCollider';
+
 import { addScalarMultiple, getAlignmentQuaternion, getAlignmentQuaternionOnPlane } from './MathUtils';
 
 const THREE = require('three');
@@ -23,7 +25,7 @@ move mouse to rotate camera around the hero
 const DEBUG_MODE = false;
 
 // hero constants
-const HERO_HALF_WIDTH = 1.4;
+const HERO_HALF_WIDTH = 1.9;
 const HERO_HEIGHT = 4;
 const HERO_LEG_FORWARD_OFFSET = 1;
 
@@ -51,6 +53,7 @@ export default class HeroMover {
     this.camera.position.set(0, 20, 40);
     this.cameraTweener = new TweenController(this.heroCamera, scene);
     this.heroTweener = new TweenController(this.hero, scene);
+    this.cameraCollider = new CameraCollider(this.camera, this.hero, 800/3, 0.05)
 
     // set up the hero // right now will be the positions of two boxes
     this.curBone = 0;
@@ -67,7 +70,9 @@ export default class HeroMover {
     this.startTime = Date.now();
     this.raycaster = new THREE.Raycaster();
     this.tailMotionCounter = -1;
-
+    this.sphere = new THREE.Mesh(new THREE.SphereGeometry(12), new THREE.MeshBasicMaterial());
+    this.sphere.material.visible = false;
+    scene.add(this.sphere)
     // worldAxis helpers
     this.worldAxis = {
       forward: new THREE.Vector3(),
@@ -143,7 +148,7 @@ export default class HeroMover {
     }
 
     const msElapsed = Date.now() - this.startTime;
-    if (msElapsed < 1000 / 3) {
+    if (msElapsed < 450) {
       return;
     }
 
@@ -346,6 +351,13 @@ export default class HeroMover {
     }
   }
 
+
+  cameraCollideCheck = () => {
+    var camPos = this.camera.getWorldPosition(new THREE.Vector3());
+    const meshes = this.worldGrid.queryPointsInRadius(camPos.x, camPos.y, camPos.z, 3);
+    this.cameraCollider.update(meshes)
+  }
+
   update() {
     this.heroTweener.update();
     this.cameraTweener.update();
@@ -362,6 +374,9 @@ export default class HeroMover {
     }
     TWEEN.update();
     this.tweener.update();
+
+    //check if camera collides
+    this.cameraCollideCheck();
     if (this.iks) {
       this.iks.forEach((ik) => {
         ik.solve();
