@@ -2,10 +2,10 @@ import Stats from 'stats-js';
 // import GlowShader from './shaders/GlowShader';
 import HeroMoverNN from './HeroMoverNN';
 import {
-  IK, IKChain, IKJoint, IKBallConstraint, IKHingeConstraint, IKHelper
-} from './THREE.IK/src';
+  IK, IKChain, IKJoint, IKBallConstraint, IKHingeConstraint, IKHelper,
+} from './libs/THREE.IK/src';
 import {
-  setZForward
+  setZForward,
 } from './misc/AxisUtils';
 import FBXLoader from './libs/FBXLoader';
 import SparseWorldGrid from './SparseWorldGrid';
@@ -32,9 +32,9 @@ export default function initWebScene() {
   // set up mainCamera
   mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
   sideCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
-  mainCamera.add(sideCamera)
-  sideCamera.position.set(30,-10,-40)
-  sideCamera.rotateY(Math.PI/2)
+  mainCamera.add(sideCamera);
+  sideCamera.position.set(30, -10, -40);
+  sideCamera.rotateY(Math.PI / 2);
   scene.add(mainCamera);
   // set up controls
   // const controls = new OrbitControls(mainCamera);
@@ -91,7 +91,7 @@ export default function initWebScene() {
     const boneGeo = new THREE.BoxGeometry(1, 1, 1);
     const boneMat = new THREE.MeshBasicMaterial({ color: '0xff00ff', wireframe: true });
     // if (!DEBUG_MODE) {
-      boneMat.visible = false;
+    boneMat.visible = false;
     // }
     const numFeet = 2;
     // backfeet
@@ -151,8 +151,13 @@ export default function initWebScene() {
 
     const iks = [];
     // backfeet
-    // const axes = [new THREE.Vector3(0.9,-0.7,0).normalize(), new THREE.Vector3(-0.02,-0.9,0).normalize()]
-    const axes = [new THREE.Vector3(-1,0,0).normalize(), new THREE.Vector3(1,0,0).normalize()]
+    /*
+    const axes = [
+        new THREE.Vector3(0.9,-0.7,0).normalize(),
+        new THREE.Vector3(-0.02,-0.9,0).normalize()
+    ]
+    */
+    const axes = [new THREE.Vector3(-1, 0, 0).normalize(), new THREE.Vector3(1, 0, 0).normalize()];
 
     for (let j = 0; j < 2; j += 1) {
       addIKForBackFeet(boneGroup.children[j + 1], iks, 4, bonePoints[j], axes[j]);
@@ -162,7 +167,7 @@ export default function initWebScene() {
     const { children } = ratMesh;
     /* eslint-disable-next-line prefer-destructuring */
     boneGroup = children[1].children[3].children[0].children[0];
-    const axesb = [new THREE.Vector3(-1,0,0).normalize(), new THREE.Vector3(1,0,0).normalize()]
+    const axesb = [new THREE.Vector3(-1, 0, 0).normalize(), new THREE.Vector3(1, 0, 0).normalize()];
     for (let j = 0; j < 2; j += 1) {
       addIKForBackFeet(boneGroup.children[j], iks, 4, bonePoints[j + 2], axesb[j]);
     }
@@ -225,7 +230,7 @@ function addIKForBackFeet(boneGroup, iks, length, boneTarget, axis) {
     let constraints;
     if (i === 0) {
       constraints = [constraintBall];
-    } else if (i === (length - 2)){
+    } else if (i === (length - 2)) {
       constraints = [new IKHingeConstraint(130, axis, scene)];
     } else {
       constraints = [constraintHinge];
