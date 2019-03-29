@@ -1,6 +1,7 @@
 import Stats from 'stats-js';
 import GLTFLoader from 'three-gltf-loader';
 import { promisifyLoader } from './Utils';
+import WEBVR from './libs/WebVR';
 
 const THREE = require('three');
 const OrbitControls = require('three-orbit-controls')(THREE);
@@ -8,9 +9,12 @@ const OrbitControls = require('three-orbit-controls')(THREE);
 
 export default class TestScene {
   constructor() {
-    this.renderer = new THREE.WebGLRenderer();
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+
+    const isVRSupport = 'getVRDisplays' in navigator;
 
     this.renderer.physicallyCorrectLights = true;
+    this.renderer.gammaInput = true;
     this.renderer.gammaOutput = true;
     this.renderer.gammaFactor = 2.2;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -20,21 +24,32 @@ export default class TestScene {
     // this.renderer.shadowMap.enabled = true;
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+
     document.body.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
     const aspectRation = window.innerWidth / window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(75, aspectRation, 0.1, 1000);
 
-    const controls = new OrbitControls(this.camera);
+    if (isVRSupport) {
+      this.renderer.vr.enabled = true;
+      document.body.appendChild(WEBVR.createButton(this.renderer));
 
-    this.camera.position.set(
-      183.28854784443533,
-      99.17413046911497,
-      317.46507731208146,
-    );
+      const user = new THREE.Group();
+      user.position.set(0, 65, 0);
+      this.scene.add(user);
+      user.add(this.camera);
+    } else {
+      const controls = new OrbitControls(this.camera);
 
-    controls.update();
+      this.camera.position.set(
+        183.28854784443533,
+        99.17413046911497,
+        317.46507731208146,
+      );
+
+      controls.update();
+    }
 
     this.stats = new Stats();
     document.body.appendChild(this.stats.dom);
@@ -52,7 +67,12 @@ export default class TestScene {
   }
 
   render = () => {
-    this.animate();
+    // this.animate();
+    this.renderer.setAnimationLoop(() => {
+      this.stats.begin();
+      this.renderer.render(this.scene, this.camera);
+      this.stats.end();
+    });
   }
 
   animate = () => {
@@ -80,13 +100,27 @@ export default class TestScene {
             break;
           }
 
+          case 'instances': {
+            instances = child;
+            break;
+          }
+
           case 'mesh': {
             mesh = child;
+
+            if (instances) {
+              break;
+            }
 
             child.applyMatrix(asset.matrixWorld);
 
             child.castShadow = true;
             child.receiveShadow = true;
+
+            // child.material.roughness = 0.2;
+            // child.material.roughnessMap = "";
+            // child.material.normalMap = "";
+            // child.material.normalScale = new THREE.Vector2(2, 2);
 
             this.scene.add(child);
             break;
@@ -117,16 +151,13 @@ export default class TestScene {
             break;
           }
 
-          case 'instances': {
-            instances = child;
-            break;
-          }
           default:
         }
       });
 
       if (instances && mesh) {
-        const { position, color, normal } = instances.geometry.attributes;
+        const { geometry } = instances;
+        const { position, color, normal } = geometry.attributes;
 
         const posArray = position.array;
         const scaleArray = color.array;

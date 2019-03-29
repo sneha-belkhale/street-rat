@@ -53,7 +53,7 @@ export default class HeroMover {
     this.camera.position.set(0, 20, 40);
     this.cameraTweener = new TweenController(this.heroCamera, scene);
     this.heroTweener = new TweenController(this.hero, scene);
-    this.cameraCollider = new CameraCollider(this.camera, this.hero, 800/3, 0.05)
+    this.cameraCollider = new CameraCollider(this.camera, this.hero, 800 / 3, 0.05);
 
     // set up the hero // right now will be the positions of two boxes
     this.curBone = 0;
@@ -72,7 +72,7 @@ export default class HeroMover {
     this.tailMotionCounter = -1;
     this.sphere = new THREE.Mesh(new THREE.SphereGeometry(12), new THREE.MeshBasicMaterial());
     this.sphere.material.visible = false;
-    scene.add(this.sphere)
+    scene.add(this.sphere);
     // worldAxis helpers
     this.worldAxis = {
       forward: new THREE.Vector3(),
@@ -353,9 +353,9 @@ export default class HeroMover {
 
 
   cameraCollideCheck = () => {
-    var camPos = this.camera.getWorldPosition(new THREE.Vector3());
+    const camPos = this.camera.getWorldPosition(new THREE.Vector3());
     const meshes = this.worldGrid.queryPointsInRadius(camPos.x, camPos.y, camPos.z, 3);
-    this.cameraCollider.update(meshes)
+    this.cameraCollider.update(meshes);
   }
 
   update() {
@@ -375,7 +375,7 @@ export default class HeroMover {
     TWEEN.update();
     this.tweener.update();
 
-    //check if camera collides
+    // check if camera collides
     this.cameraCollideCheck();
     if (this.iks) {
       this.iks.forEach((ik) => {
